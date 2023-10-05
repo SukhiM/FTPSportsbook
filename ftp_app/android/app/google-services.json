@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "307152432106",
+    "project_id": "ftp-sportsbook",
+    "storage_bucket": "ftp-sportsbook.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:307152432106:android:b8349b5ca232bbbc17a093",
+        "android_client_info": {
+          "package_name": "com.example.ftp_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6DxQs2bkdcBLJ1hGKw_iHOZolFjAMBak"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
