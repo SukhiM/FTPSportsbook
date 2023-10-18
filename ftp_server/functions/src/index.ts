@@ -19,7 +19,15 @@ const sportsRadarNBAKey = "pdmqy8pxggcnh6ejjbe8mdsz";
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
 
+// Loads NBA Game data from SportsRadar API and stores in Firestore
 export const loadNBAGames = onRequest(async (request, response) => {
+  /*
+  TODO:
+  - Modify function to use date from request;
+      currently hardcoded date of 10/24/2023
+  - Load odds for each game
+  */
+
   const resp: any = await fetch("http://api.sportradar.us/nba/trial/v8/en/games/2023/10/24/schedule.json?api_key=" + sportsRadarNBAKey);
   const json = await resp.json();
   const date = json.date;
@@ -40,6 +48,28 @@ export const loadNBAGames = onRequest(async (request, response) => {
   }
 
   response.send(json);
+});
+
+// Returns NBA Game data from Firestore for a given date
+export const getNBAGames = onRequest(async (request, response) => {
+  /*
+  TODO:
+  - Get the date from the request
+  - Query Firestore for games on date
+  - Return the games
+  */
+});
+
+// Places a bet for a user on a game and stores in user's history
+export const placeBet = onRequest(async (request, response) => {
+  /*
+  TODO:
+  - Get the user ID from the request
+  - Get the bet from the request
+  - Get the game from the request
+  - Add bet to history for user
+  - Return confirmation to client
+  */
 });
 
 export const testHTTP = onRequest(async (request, response) => {
