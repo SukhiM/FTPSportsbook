@@ -19,7 +19,7 @@ const sportsRadarNBAKey = "pdmqy8pxggcnh6ejjbe8mdsz";
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
 
-export const getNBAGames = onRequest(async (request, response) => {
+export const loadNBAGames = onRequest(async (request, response) => {
   const resp: any = await fetch("http://api.sportradar.us/nba/trial/v8/en/games/2023/10/24/schedule.json?api_key=" + sportsRadarNBAKey);
   const json = await resp.json();
   const date = json.date;
