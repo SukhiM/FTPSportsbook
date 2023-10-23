@@ -15,6 +15,7 @@ import {initializeApp} from "firebase-admin/app";
 initializeApp();
 
 const sportsRadarNBAKey = "pdmqy8pxggcnh6ejjbe8mdsz";
+// const oddsKey = "ea24407b8b130f7a2b2a3bf7401fe267";
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -39,15 +40,17 @@ export const loadNBAGames = onRequest(async (request, response) => {
   for (const game of gamesArr) {
     const homeTeam = game.home.alias;
     const awayTeam = game.away.alias;
-    nbaGamesCollection.doc(homeTeam + "v" + awayTeam).set({
+    const gameID = game.id;
+    nbaGamesCollection.doc(gameID).set({
       date: date,
       time: game.scheduled,
       home: homeTeam,
       away: awayTeam,
+      id: gameID,
     });
   }
 
-  response.send(json);
+  response.status(200).send();
 });
 
 // Returns NBA Game data from Firestore for a given date
@@ -58,6 +61,17 @@ export const getNBAGames = onRequest(async (request, response) => {
   - Query Firestore for games on date
   - Return the games
   */
+
+  const gamesList: any = [];
+
+  // Date will be changed to be read from request body
+  const date = "2023-10-24";
+  const nbaGamesCollection = getFirestore().collection("nba_games")
+    .doc(date).collection("games").get();
+  (await nbaGamesCollection).forEach((doc) => {
+    gamesList.push(doc.data());
+  });
+  response.send(gamesList);
 });
 
 // Places a bet for a user on a game and stores in user's history
