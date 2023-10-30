@@ -1,7 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'package:ftp_app/views/login_view.dart';
+import 'package:ftp_app/views/home_view.dart';
 
 const String apiKey = 'AIzaSyC6DxQs2bkdcBLJ1hGKw_iHOZolFjAMBak';
 const String appId = '1:307152432106:android:b8349b5ca232bbbc17a093';
@@ -22,12 +24,31 @@ void main() async {
 }
 
 class SportsbookApp extends StatelessWidget {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Sportsbook App',
-      home: LoginApp(),
+      title: 'Your App',
+      home: StreamBuilder<User?>(
+        stream: _auth.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.active) {
+            User? user = snapshot.data;
+            if (user == null) {
+              return LoginScreen();
+            } else {
+              return SportsbookHomeScreen();
+            }
+          } else {
+            return Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+        },
+      ),
     );
   }
 }
