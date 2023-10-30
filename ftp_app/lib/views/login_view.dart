@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:ftp_app/views/home_view.dart';
 
 void main() => runApp(LoginApp());
 
@@ -40,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
             context,
             MaterialPageRoute(
                 builder: (context) =>
-                    HomeScreen())); // Assuming you have a HomeScreen widget
+                    SportsbookHomeScreen())); // Assuming you have a HomeScreen widget
       } catch (e) {
         // Handle authentication error, show a message to the user
         ScaffoldMessenger.of(context).showSnackBar(
