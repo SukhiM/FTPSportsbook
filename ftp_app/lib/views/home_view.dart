@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'package:flutter_date_pickers/flutter_date_pickers.dart';
 
 import 'package:ftp_app/views/settings_view.dart';
@@ -33,6 +34,55 @@ class Game {
       date: DateTime.parse(json['date']),
     );
   }
+}
+
+void _placeBet(String team, double amount) async {
+  // Your logic to make the HTTP request goes here.
+  // For example:
+  //
+  // final response = await http.post(
+  //   Uri.parse('YOUR_API_ENDPOINT'),
+  //   body: {'team': team, 'amount': amount.toString()},
+  // );
+  //
+  // Check response, handle errors, etc.
+  print('Placing bet of $amount on $team');
+}
+
+Future<void> _showBetAmountDialog(BuildContext context, String team) async {
+  TextEditingController _amountController = TextEditingController();
+
+  return showDialog<void>(
+    context: context,
+    builder: (BuildContext dialogContext) {
+      return AlertDialog(
+        title: Text('Place bet on $team'),
+        content: TextField(
+          controller: _amountController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            hintText: "Enter amount",
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: Text('Cancel'),
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+            },
+          ),
+          TextButton(
+            child: Text('Confirm'),
+            onPressed: () {
+              // Handle bet confirmation
+              _placeBet(team, double.tryParse(_amountController.text) ?? 0.0);
+              Navigator.of(dialogContext).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
 }
 
 class SportsbookHomeScreen extends StatefulWidget {
@@ -119,6 +169,18 @@ class _HomeViewState extends State<HomeView> {
     futureGames = fetchGames();
   }
 
+  Widget _teamRow(BuildContext context, String team, DateTime gameDate) {
+    return ListTile(
+      title: Text(team),
+      subtitle:
+          Text(DateFormat('hh:mm a').format(gameDate)), // Display the game time
+      trailing: ElevatedButton(
+        onPressed: () => _showBetAmountDialog(context, team),
+        child: Text('Bet'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -134,9 +196,17 @@ class _HomeViewState extends State<HomeView> {
             return ListView.builder(
               itemCount: games.length,
               itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text('${games[index].team1} vs ${games[index].team2}'),
-                  subtitle: Text(games[index].date.toIso8601String()),
+                return Card(
+                  // Using Card to give it a distinct look. You can use Container or any other widget.
+                  margin: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                  color: Color(0xFFE5E5DC),
+                  child: Column(
+                    children: [
+                      _teamRow(context, games[index].team1, games[index].date),
+                      Divider(), // visually separate the teams
+                      _teamRow(context, games[index].team2, games[index].date),
+                    ],
+                  ),
                 );
               },
             );
