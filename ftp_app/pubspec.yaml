@@ -32,6 +32,7 @@ dependencies:
   firebase_auth: ^4.11.1
   cloud_firestore: ^4.11.0
   http: ^0.13.3
+  flutter_date_pickers: ^0.4.2
   flutter:
     sdk: flutter
 
