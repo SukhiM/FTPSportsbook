@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+
 import 'dart:convert';
+import 'package:flutter_date_pickers/flutter_date_pickers.dart';
 
 import 'package:ftp_app/views/settings_view.dart';
 
@@ -93,7 +95,23 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
+  DateTime _selectedDate = DateTime.now();
   Future<List<Game>> futureGames = fetchGames();
+
+  void _selectDate(BuildContext context) async {
+    DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2023),
+      lastDate: DateTime(2024),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+        futureGames = fetchGames(); // Refetch the games for the selected date
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -126,6 +144,11 @@ class _HomeViewState extends State<HomeView> {
             return Center(child: CircularProgressIndicator());
           }
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _selectDate(context),
+        child: Icon(Icons.calendar_today),
+        tooltip: 'Select Date',
       ),
     );
   }
