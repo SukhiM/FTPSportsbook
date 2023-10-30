@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ftp_app/views/home_view.dart';
+import 'package:ftp_app/views/signup_view.dart';
 
 void main() => runApp(LoginApp());
 
@@ -93,6 +94,15 @@ class _LoginScreenState extends State<LoginScreen> {
               ElevatedButton(
                 child: Text('Login'),
                 onPressed: _login,
+              ),
+              ElevatedButton(
+                child: Text('Don\'t have an account? Sign Up'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SignupApp()),
+                  );
+                },
               ),
             ],
           ),
