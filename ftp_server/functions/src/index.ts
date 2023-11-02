@@ -6,11 +6,13 @@
  *
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
-
 import {onRequest} from "firebase-functions/v2/https";
 import {getFirestore} from "firebase-admin/firestore";
 
 import {initializeApp} from "firebase-admin/app";
+import axios from "axios";
+
+const loadNBAGamesAddress = "https://loadnbagames-kca5bali4a-uc.a.run.app";
 
 initializeApp();
 
@@ -22,14 +24,22 @@ const sportsRadarNBAKey = "pdmqy8pxggcnh6ejjbe8mdsz";
 
 // Loads NBA Game data from SportsRadar API and stores in Firestore
 export const loadNBAGames = onRequest(async (request, response) => {
-  /*
-  TODO:
-  - Modify function to use date from request;
-      currently hardcoded date of 10/24/2023
-  - Load odds for each game
-  */
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, "0"); // Months are 0-based, hence +1
+    const day = date.getDate().toString().padStart(2, "0");
 
-  const resp: any = await fetch("http://api.sportradar.us/nba/trial/v8/en/games/2023/10/24/schedule.json?api_key=" + sportsRadarNBAKey);
+    return `${year}/${month}/${day}`;
+  };
+
+  let passedDate: Date;
+  if (!request.body.date) {
+    passedDate = new Date();
+  } else {
+    passedDate = new Date(request.body.date);
+  }
+  const reqDate = formatDate(passedDate);
+  const resp: any = await fetch("http://api.sportradar.us/nba/trial/v8/en/games/" + reqDate + "/schedule.json?api_key=" + sportsRadarNBAKey);
   const json = await resp.json();
   const date = json.date;
   const gamesArr = json.games;
@@ -81,11 +91,26 @@ export const getNBAGames = onRequest(async (request, response) => {
 
   // Date will be changed to be read from request body
   const date = request.body.date;
-  const nbaGamesCollection = getFirestore().collection("nba_games")
+  let nbaGamesCollection = getFirestore().collection("nba_games")
     .doc(date).collection("games").get();
   (await nbaGamesCollection).forEach((doc) => {
     gamesList.push(doc.data());
   });
+
+  if (gamesList.isEmpty) {
+    const body = {
+      "date": date,
+    };
+
+    const response = await axios.post(loadNBAGamesAddress, body);
+    if (response.status == 200) {
+      nbaGamesCollection = getFirestore().collection("nba_games")
+        .doc(date).collection("games").get();
+      (await nbaGamesCollection).forEach((doc) => {
+        gamesList.push(doc.data());
+      });
+    }
+  }
   response.send(gamesList);
 });
 
