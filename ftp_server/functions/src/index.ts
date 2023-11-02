@@ -109,6 +109,8 @@ export const getNBAGames = onRequest(async (request, response) => {
       (await nbaGamesCollection).forEach((doc) => {
         gamesList.push(doc.data());
       });
+    } else {
+      response.send(response)
     }
   }
   response.send(gamesList);
