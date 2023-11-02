@@ -9,10 +9,19 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:ftp_app/views/settings_view.dart';
 
-const String loadNBAGames = 'https://getnbagames-kca5bali4a-uc.a.run.app';
+const String loadNBAGames = 'https://getnbagames-kca5bali4a-uc.a.run.app/';
+Future<List<Game>> fetchGames([DateTime? date]) async {
+  Map<String, String> requestBody = {
+    "date": DateFormat('yyyy-MM-dd').format(date ?? DateTime.now())
+  };
 
-Future<List<Game>> fetchGames() async {
-  final response = await http.get(Uri.parse(loadNBAGames));
+  print(jsonEncode(requestBody));
+
+  final response = await http.post(Uri.parse(loadNBAGames),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(requestBody));
 
   if (response.statusCode == 200) {
     Iterable gamesList = json.decode(response.body);
@@ -164,7 +173,8 @@ class _HomeViewState extends State<HomeView> {
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
-        futureGames = fetchGames(); // Refetch the games for the selected date
+        futureGames = fetchGames(
+            _selectedDate); // Refetch the games for the selected date
       });
     }
   }
