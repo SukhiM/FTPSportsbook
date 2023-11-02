@@ -80,7 +80,7 @@ export const getNBAGames = onRequest(async (request, response) => {
   const gamesList: any = [];
 
   // Date will be changed to be read from request body
-  const date = "2023-10-24";
+  const date = request.body.date;
   const nbaGamesCollection = getFirestore().collection("nba_games")
     .doc(date).collection("games").get();
   (await nbaGamesCollection).forEach((doc) => {
