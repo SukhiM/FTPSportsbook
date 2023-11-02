@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:flutter_date_pickers/flutter_date_pickers.dart';
 
+import 'package:flutter_svg/flutter_svg.dart';
+
 import 'package:ftp_app/views/settings_view.dart';
 
 const String loadNBAGames = 'https://getnbagames-kca5bali4a-uc.a.run.app';
@@ -34,6 +36,10 @@ class Game {
       date: DateTime.parse(json['date']),
     );
   }
+}
+
+String formatGameTime(DateTime date) {
+  return DateFormat('h:mm a').format(date);
 }
 
 void _placeBet(String team, double amount) async {
@@ -169,15 +175,43 @@ class _HomeViewState extends State<HomeView> {
     futureGames = fetchGames();
   }
 
-  Widget _teamRow(BuildContext context, String team, DateTime gameDate) {
-    return ListTile(
-      title: Text(team),
-      subtitle:
-          Text(DateFormat('hh:mm a').format(gameDate)), // Display the game time
-      trailing: ElevatedButton(
-        onPressed: () => _showBetAmountDialog(context, team),
-        child: Text('Bet'),
-      ),
+  Widget _teamLogo(String teamName) {
+    String assetName =
+        'assets/logos/$teamName.svg'; // Construct the asset name dynamically
+    return SvgPicture.asset(assetName,
+        height: 24, width: 24); // Adjust the size as needed
+  }
+
+  Widget _teamRow(Game game, bool isHomeTeam) {
+    String teamName = isHomeTeam ? game.team1 : game.team2;
+    String assetName =
+        'assets/logos/$teamName.svg'; // Assuming team name matches the SVG filename
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          // Use nested row for logo and team name side by side
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(
+                  left: 15.0), // Adjust this value for more/less padding
+              child: SvgPicture.asset(
+                assetName,
+                width: 24, // You can adjust these values
+                height: 24, // You can adjust these values
+                fit: BoxFit.contain,
+              ),
+            ),
+            SizedBox(width: 8), // Some spacing between logo and team name
+            Text(teamName),
+          ],
+        ),
+        ElevatedButton(
+          onPressed: () => _showBetAmountDialog(context, teamName),
+          child: Text("Bet"),
+        ),
+      ],
     );
   }
 
@@ -185,35 +219,64 @@ class _HomeViewState extends State<HomeView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('NBA Games')),
-      body: FutureBuilder<List<Game>>(
-        future: futureGames,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
-            List<Game> games = snapshot.data ?? [];
-            return ListView.builder(
-              itemCount: games.length,
-              itemBuilder: (context, index) {
-                return Card(
-                  // Using Card to give it a distinct look. You can use Container or any other widget.
-                  margin: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                  color: Color(0xFFE5E5DC),
-                  child: Column(
-                    children: [
-                      _teamRow(context, games[index].team1, games[index].date),
-                      Divider(), // visually separate the teams
-                      _teamRow(context, games[index].team2, games[index].date),
-                    ],
-                  ),
-                );
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              DateFormat('MMMM d, y').format(_selectedDate),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<Game>>(
+              future: futureGames,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.done) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  List<Game> games = snapshot.data ?? [];
+
+                  // This is the updated ListView.builder
+                  return ListView.builder(
+                    itemCount: games.length,
+                    itemBuilder: (context, index) {
+                      return Container(
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        margin: EdgeInsets.symmetric(
+                            vertical: 4.0, horizontal: 8.0),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300], // light grey
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: Column(
+                          children: [
+                            _teamRow(games[index], true),
+                            _teamRow(games[index], false),
+                            Align(
+                              alignment: Alignment.bottomLeft,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  formatGameTime(games[index].date),
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                } else {
+                  return Center(child: CircularProgressIndicator());
+                }
               },
-            );
-          } else {
-            return Center(child: CircularProgressIndicator());
-          }
-        },
+            ),
+          )
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _selectDate(context),

@@ -50,6 +50,21 @@ export const loadNBAGames = onRequest(async (request, response) => {
     });
   }
 
+  // const oddsResp = await fetch("https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?apiKey=" + oddsKey + "&regions=us&markets=h2h&bookmakers=draftkings");
+  // const oddsJSON = await oddsResp.json();
+
+  // for (const game of oddsJSON) {
+  //   const homeTeam = game.home_team;
+  //   const awayTeam = game.away_team;
+
+  //   const gameBoomaker = game.bookmakers[0].markets.outcomes;
+
+  //   const homeOdds = gameBoomaker[0].price;
+  //   const awayOdds = gameBoomaker[1].price;
+
+  //   // TODO: Find game in DB and update odds
+  // }
+
   response.status(200).send();
 });
 
