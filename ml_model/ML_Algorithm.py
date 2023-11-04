@@ -62,27 +62,41 @@ class NBAResultsPredictor:
 
         # Predict the winning team
         prediction = self.model.predict(new_df)
-        prediction = prediction[0][0] # Extract result from multi-dimensional array
-        prediction = round(prediction)
 
-        if (abs(prediction - home_team) < abs(home_team - away_team)):
-            return(home_team)
-        else: 
-            return(away_team)
+        prediction = prediction[0][0] # Extract result from multi-dimensional array
+        confidence = prediction - round(prediction)
+
+        if(confidence < 0.5): # Make sure confidence value is always looking at chance of winning team winning not losing team losing
+            confidence = 1 - confidence
+        if(confidence > 1):
+            confidence = 0.99
+        confidence = confidence * 100
+
+        if (abs(prediction - home_team) < abs(prediction - away_team)):
+            array = [home_team, confidence]
+        else:
+            array = [away_team, confidence]
+        return array
+    
 
         
     def predict_for_all(self):
         # Create a list of all possible matchups
         c = 0
+        # Create csv file, add first row
+        with open("predictions.csv", "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["HOMETEAM", "AWAYTEAM", "PREDICTEDWINNER", "PROBABILITY"])
         for i in range(self.df3.size):
             for j in range(i + 1, self.df3.size): # range is correct, 435 outputs for 30 teams is every combination
                 if i != j:
                     c = c + 1
-                    print('Predicted winner between {} vs. {}: {}'.format(self.df3[i], self.df3[j], self.df3[self.predict_winning_team(i, j)]))
                     # Write the prediction to the CSV file
                     with open("predictions.csv", "a", newline="") as f:
                         writer = csv.writer(f)
-                        writer.writerow([self.df3[i], self.df3[j], self.df3[self.predict_winning_team(i, j)]])
+                        output = self.predict_winning_team(i, j)
+                        writer.writerow([self.df3[i], self.df3[j], self.df3[output[0]], format(output[1], '.2f')])
+                    print('Predicted winner between {} vs. {}: {} with a probability of {}'.format(self.df3[i], self.df3[j], self.df3[output[0]], format(output[1], '.2f')))
 
         print("Total count")
         print(c)
