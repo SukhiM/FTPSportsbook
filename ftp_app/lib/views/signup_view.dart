@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ftp_app/views/home_view.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
+final FirebaseFirestore _db = FirebaseFirestore.instance;
 void main() => runApp(SignupApp());
 
 class SignupApp extends StatelessWidget {
@@ -36,6 +38,12 @@ class _SignupScreenState extends State<SignupScreen> {
           email: _username,
           password: _password,
         );
+
+        await _db.collection('users').doc(userCredential.user!.uid).set({
+          'email': _username,
+          'balance': 1000.0,
+          // betHistory can be a subcollection
+        });
 
         // Successful login. Navigate to home screen or show a success message
         Navigator.pushReplacement(
