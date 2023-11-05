@@ -102,4 +102,6 @@ flutter:
 flutter_icons:
     android: true
     ios: true
-    image_path: "assets/FTPLogo.png"
+    image_path: "assets/ftp_logo_resized.png"
+    adaptive_icon_background: "#0c1721"
+    adaptive_icon_foreground: "assets/ftp_logo_resized.png"
