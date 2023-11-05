@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:ftp_app/views/change_password_view.dart';
 
@@ -10,6 +11,31 @@ class SettingsView extends StatefulWidget {
 
 class _SettingsViewState extends State<SettingsView> {
   final _auth = FirebaseAuth.instance;
+  num? balance;
+
+  Future<void> _fetchBalance() async {
+    try {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_auth.currentUser?.uid)
+          .get();
+
+      var userData = userDoc.data() as Map<String, dynamic>?; // Cast as a Map
+      setState(() {
+        balance =
+            userData?['balance'] as num?; // Now we can use the [] operator
+      });
+    } catch (e) {
+      // Handle the error or show a message
+      print("Error fetching balance: $e");
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBalance();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +48,10 @@ class _SettingsViewState extends State<SettingsView> {
           ListTile(
             title: Text('Email:'),
             subtitle: Text(_auth.currentUser?.email ?? 'N/A'),
+          ),
+          ListTile(
+            title: Text('Balance'),
+            trailing: Text(balance?.toString() ?? 'Loading...'),
           ),
           ListTile(
             title: ElevatedButton(
