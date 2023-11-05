@@ -8,6 +8,7 @@
  */
 import {onRequest} from "firebase-functions/v2/https";
 import {getFirestore} from "firebase-admin/firestore";
+import * as admin from "firebase-admin";
 
 import {initializeApp} from "firebase-admin/app";
 
@@ -95,7 +96,9 @@ export const getNBAGames = onRequest(async (request, response) => {
   const nbaGamesCollection = getFirestore().collection("nba_games")
     .doc(date).collection("games").get();
   (await nbaGamesCollection).forEach((doc) => {
-    gamesList.push(doc.data());
+    const gameData = doc.data();
+    gameData.gameID = doc.id;
+    gamesList.push(gameData);
   });
 
   if (gamesList.isEmpty) {
@@ -116,10 +119,10 @@ export const getNBAGames = onRequest(async (request, response) => {
       const nbaGamesCollection = getFirestore().collection("nba_games")
         .doc(date).collection("games").get();
       (await nbaGamesCollection).forEach((doc) => {
-        gamesList.push(doc.data());
+        const gameData = doc.data();
+        gameData.gameID = doc.id;
+        gamesList.push(gameData);
       });
-    } else {
-      response.send(response)
     }
   }
 
@@ -136,6 +139,72 @@ export const placeBet = onRequest(async (request, response) => {
   - Add bet to history for user
   - Return confirmation to client
   */
+  const uid = request.body.uid;
+  if (!uid) {
+    response.status(400).send("No user ID provided");
+    return;
+  }
+
+  const gameID = request.body.gameID;
+  if (!gameID) {
+    response.status(400).send("No game ID provided");
+    return;
+  }
+
+  const team = request.body.team;
+  if (!team) {
+    response.status(400).send("No team provided");
+    return;
+  }
+
+  const amount = Number(request.body.amount);
+  if (!amount) {
+    response.status(400).send("No amount provided");
+    return;
+  }
+
+  try {
+    const db = getFirestore();
+
+    // Start a transaction to ensure atomic read and write operations
+    await db.runTransaction(async (transaction) => {
+      const userRef = db.collection("users").doc(uid);
+
+      // Get the user's current balance by retrieving the snapshot first
+      const userSnapshot = await transaction.get(userRef);
+      const userData = userSnapshot.data();
+
+      const userBalance = userData!.balance;
+
+      // Check if the balance is sufficient for the bet
+      if (userBalance < amount) {
+        response.status(400).send("Insufficient balance");
+        return;
+      }
+
+      // If the balance is sufficient, proceed to place the bet
+      const newBetRef = userRef.collection("bet_history").doc();
+
+      // Deduct the bet amount from the user's balance & add the bet to history
+      transaction.update(userRef, {balance: userBalance - amount});
+      transaction.set(newBetRef, {
+        gameID: gameID,
+        amount: amount,
+        team: team,
+        matchup: request.body.matchup,
+        placedAt: admin.firestore.FieldValue.serverTimestamp(),
+        // include other bet details as necessary
+      });
+    });
+
+    // If the transaction completes successfully, send back a success message
+    response.status(200).send("Bet placed successfully");
+  } catch (error) {
+    console.error("Transaction failure:", error);
+    response.status(500).send("Transaction failure");
+  }
+
+  response.status(200).send();
 });
 
 export const testHTTP = onRequest(async (request, response) => {

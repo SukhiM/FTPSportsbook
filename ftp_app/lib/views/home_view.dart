@@ -4,12 +4,14 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:flutter_date_pickers/flutter_date_pickers.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:ftp_app/views/settings_view.dart';
 
 const String loadNBAGames = 'https://getnbagames-kca5bali4a-uc.a.run.app/';
+const String placeBet = 'https://placebet-kca5bali4a-uc.a.run.app/';
 Future<List<Game>> fetchGames([DateTime? date]) async {
   Map<String, String> requestBody = {
     "date": DateFormat('yyyy-MM-dd').format(date ?? DateTime.now())
@@ -35,11 +37,17 @@ class Game {
   final String team1;
   final String team2;
   final DateTime date;
+  final String gameID;
 
-  Game({required this.team1, required this.team2, required this.date});
+  Game(
+      {required this.gameID,
+      required this.team1,
+      required this.team2,
+      required this.date});
 
   factory Game.fromJson(Map<String, dynamic> json) {
     return Game(
+      gameID: json['gameID'],
       team1: json['home'],
       team2: json['away'],
       date: DateTime.parse(json['date']),
@@ -51,20 +59,41 @@ String formatGameTime(DateTime date) {
   return DateFormat('h:mm a').format(date);
 }
 
-void _placeBet(String team, double amount) async {
-  // Your logic to make the HTTP request goes here.
-  // For example:
-  //
-  // final response = await http.post(
-  //   Uri.parse('YOUR_API_ENDPOINT'),
-  //   body: {'team': team, 'amount': amount.toString()},
-  // );
-  //
-  // Check response, handle errors, etc.
-  print('Placing bet of $amount on $team');
+void _placeBet(
+    String team, double amount, String gameID, String matchup) async {
+  String uid =
+      FirebaseAuth.instance.currentUser!.uid; // Replace with the actual user ID
+
+  try {
+    final response = await http.post(
+      Uri.parse(placeBet),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, dynamic>{
+        'uid': uid,
+        'team': team,
+        'amount': amount,
+        'gameID': gameID,
+        'matchup': matchup,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print('Bet placed successfully');
+      // Handle successful response
+    } else {
+      print('Failed to place bet: ${response.body}');
+      // Handle error response
+    }
+  } catch (e) {
+    print('Error occurred while trying to place bet: $e');
+    // Handle any errors that occur during the POST request
+  }
 }
 
-Future<void> _showBetAmountDialog(BuildContext context, String team) async {
+Future<void> _showBetAmountDialog(
+    BuildContext context, String team, String gameID, String matchup) async {
   TextEditingController _amountController = TextEditingController();
 
   return showDialog<void>(
@@ -90,7 +119,8 @@ Future<void> _showBetAmountDialog(BuildContext context, String team) async {
             child: Text('Confirm'),
             onPressed: () {
               // Handle bet confirmation
-              _placeBet(team, double.tryParse(_amountController.text) ?? 0.0);
+              _placeBet(team, double.tryParse(_amountController.text) ?? 0.0,
+                  gameID, matchup);
               Navigator.of(dialogContext).pop();
             },
           ),
@@ -119,7 +149,7 @@ class _SportsbookHomeScreenState extends State<SportsbookHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sportsbook App'),
+        title: Text('For the People Sportsbook'),
         backgroundColor: Colors.blue,
       ),
       body: _pages[_currentIndex],
@@ -194,8 +224,10 @@ class _HomeViewState extends State<HomeView> {
 
   Widget _teamRow(Game game, bool isHomeTeam) {
     String teamName = isHomeTeam ? game.team1 : game.team2;
+    String gameID = game.gameID;
     String assetName =
         'assets/logos/$teamName.svg'; // Assuming team name matches the SVG filename
+    String matchup = '${game.team1} @ ${game.team2}';
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -218,7 +250,8 @@ class _HomeViewState extends State<HomeView> {
           ],
         ),
         ElevatedButton(
-          onPressed: () => _showBetAmountDialog(context, teamName),
+          onPressed: () =>
+              _showBetAmountDialog(context, teamName, gameID, matchup),
           child: Text("Bet"),
         ),
       ],
@@ -231,12 +264,35 @@ class _HomeViewState extends State<HomeView> {
       appBar: AppBar(title: Text('NBA Games')),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              DateFormat('MMMM d, y').format(_selectedDate),
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          // Padding(
+          //   padding: const EdgeInsets.all(8.0),
+          //   child: Text(
+          //     DateFormat('MMMM d, y').format(_selectedDate),
+          //     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          //   ),
+          // ),
+
+          ListTile(
+            // title: Text(
+            //   'NBA Games',
+            //   style: TextStyle(
+            //     fontWeight: FontWeight.bold,
+            //     color: Colors.blue[800],
+            //   ),
+            // ),
+            subtitle: InkWell(
+              onTap: () => _selectDate(
+                  context), // Call the date picker function when the date is tapped
+              child: Text(
+                DateFormat('MMMM d, y').format(_selectedDate),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
             ),
+            trailing: IconButton(
+              icon: Icon(Icons.calendar_today),
+              onPressed: () =>
+                  _selectDate(context), // Triggers the date picker for the icon
+            ), // Optional icon for visual indication
           ),
           Expanded(
             child: FutureBuilder<List<Game>>(
@@ -287,11 +343,6 @@ class _HomeViewState extends State<HomeView> {
             ),
           )
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _selectDate(context),
-        child: Icon(Icons.calendar_today),
-        tooltip: 'Select Date',
       ),
     );
   }

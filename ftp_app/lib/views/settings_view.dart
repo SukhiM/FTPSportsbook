@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:ftp_app/views/change_password_view.dart';
+import 'package:ftp_app/views/bet_history_view.dart';
 
 class SettingsView extends StatefulWidget {
   @override
@@ -52,6 +53,17 @@ class _SettingsViewState extends State<SettingsView> {
           ListTile(
             title: Text('Balance'),
             trailing: Text(balance?.toString() ?? 'Loading...'),
+          ),
+          ListTile(
+            title: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => BetHistoryView()),
+                );
+              },
+              child: Text('Bet History'),
+            ),
           ),
           ListTile(
             title: ElevatedButton(
