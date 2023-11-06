@@ -27,35 +27,59 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _auth = FirebaseAuth.instance;
-  String _username = ''; // Assuming this is an email for Firebase Auth
+  String _email = '';
+  String _username = '';
   String _password = '';
 
   void _signup() async {
     if (_formKey.currentState!.validate()) {
-      try {
-        UserCredential userCredential =
-            await _auth.createUserWithEmailAndPassword(
-          email: _username,
-          password: _password,
-        );
+      final usernameDocRef = _db.collection("usernames").doc(_username);
+      final usernameSnapshot = await usernameDocRef.get();
 
-        await _db.collection('users').doc(userCredential.user!.uid).set({
-          'email': _username,
-          'balance': 1000.0,
-          // betHistory can be a subcollection
-        });
-
-        // Successful login. Navigate to home screen or show a success message
-        Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-                builder: (context) =>
-                    SportsbookHomeScreen())); // Assuming you have a HomeScreen widget
-      } catch (e) {
-        // Handle authentication error, show a message to the user
+      if (usernameSnapshot.exists) {
+        // Username is already taken, show SnackBar
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(content: Text('Error: Username is already taken.')),
         );
+      } else {
+        // Username is not taken, proceed with account creation
+        try {
+          UserCredential userCredential =
+              await _auth.createUserWithEmailAndPassword(
+            email: _email,
+            password: _password,
+          );
+
+          // Use a batch to perform both operations atomically
+          final batch = _db.batch();
+
+          final userDocRef =
+              _db.collection('users').doc(userCredential.user!.uid);
+          batch.set(userDocRef, {
+            'email': _email,
+            'username': _username,
+            'balance': 1000.0,
+            // Add other user fields as necessary
+          });
+
+          batch.set(usernameDocRef, {
+            'uid': userCredential.user!.uid,
+          });
+
+          // Commit the batch
+          await batch.commit();
+
+          // Successful account creation. Navigate to home screen or show a success message
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => SportsbookHomeScreen()),
+          );
+        } catch (e) {
+          // Handle other authentication errors, show a message to the user
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${e.toString()}')),
+          );
+        }
       }
     }
   }
@@ -82,6 +106,19 @@ class _SignupScreenState extends State<SignupScreen> {
                 },
                 onChanged: (value) {
                   _username = value;
+                },
+              ),
+              SizedBox(height: 16.0),
+              TextFormField(
+                decoration: InputDecoration(labelText: 'Email'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your email';
+                  }
+                  return null;
+                },
+                onChanged: (value) {
+                  _email = value;
                 },
               ),
               SizedBox(height: 16.0),
