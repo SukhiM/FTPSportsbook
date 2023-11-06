@@ -29,8 +29,10 @@ class _SocialFeedState extends State<SocialFeed> {
         title: Text("Social Feed"),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream:
-            FirebaseFirestore.instance.collection('global_feed').snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('global_feed')
+            .orderBy('placedAt', descending: true)
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
