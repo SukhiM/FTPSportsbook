@@ -53,12 +53,14 @@ export const loadNBAGames = onRequest(async (request, response) => {
     const homeTeam = game.home.alias;
     const awayTeam = game.away.alias;
     const gameID = game.id;
+    const status = game.status;
     nbaGamesCollection.doc(gameID).set({
       date: date,
       time: game.scheduled,
       home: homeTeam,
       away: awayTeam,
       id: gameID,
+      status: status,
     });
   }
 
