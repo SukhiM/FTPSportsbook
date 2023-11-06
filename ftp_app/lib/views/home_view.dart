@@ -13,6 +13,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:ftp_app/views/settings_view.dart';
 import 'package:ftp_app/views/feed_view.dart';
+import 'package:ftp_app/views/simulate_view.dart';
 
 const String loadNBAGames = 'https://getnbagames-kca5bali4a-uc.a.run.app/';
 const String placeBet = 'https://placebet-kca5bali4a-uc.a.run.app/';
@@ -410,8 +411,6 @@ class SocialFeedScreen extends StatelessWidget {
 class SimulatorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text('Simulator Screen'),
-    );
+    return SimulatorView();
   }
 }
