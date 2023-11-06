@@ -12,6 +12,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:ftp_app/views/settings_view.dart';
+import 'package:ftp_app/views/feed_view.dart';
 
 const String loadNBAGames = 'https://getnbagames-kca5bali4a-uc.a.run.app/';
 const String placeBet = 'https://placebet-kca5bali4a-uc.a.run.app/';
@@ -79,8 +80,8 @@ String formatGameTime(DateTime utcDateTime) {
   return DateFormat('h:mm a').format(estDateTime);
 }
 
-void _placeBet(
-    String team, double amount, String gameID, String matchup) async {
+void _placeBet(BuildContext context, String team, double amount, String gameID,
+    String matchup) async {
   String uid =
       FirebaseAuth.instance.currentUser!.uid; // Replace with the actual user ID
 
@@ -102,9 +103,15 @@ void _placeBet(
     if (response.statusCode == 200) {
       print('Bet placed successfully');
       // Handle successful response
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Bet placed successfully!')),
+      );
     } else {
       print('Failed to place bet: ${response.body}');
       // Handle error response
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${response.body}')),
+      );
     }
   } catch (e) {
     print('Error occurred while trying to place bet: $e');
@@ -139,8 +146,12 @@ Future<void> _showBetAmountDialog(
             child: Text('Confirm'),
             onPressed: () {
               // Handle bet confirmation
-              _placeBet(team, double.tryParse(_amountController.text) ?? 0.0,
-                  gameID, matchup);
+              _placeBet(
+                  context,
+                  team,
+                  double.tryParse(_amountController.text) ?? 0.0,
+                  gameID,
+                  matchup);
               Navigator.of(dialogContext).pop();
             },
           ),
@@ -392,9 +403,7 @@ class SettingsScreen extends StatelessWidget {
 class SocialFeedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text('Social Feed Screen'),
-    );
+    return SocialFeed();
   }
 }
 
