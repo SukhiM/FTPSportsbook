@@ -12,6 +12,7 @@ class SettingsView extends StatefulWidget {
 
 class _SettingsViewState extends State<SettingsView> {
   final _auth = FirebaseAuth.instance;
+  String? username;
   num? balance;
 
   Future<void> _fetchBalance() async {
@@ -23,8 +24,8 @@ class _SettingsViewState extends State<SettingsView> {
 
       var userData = userDoc.data() as Map<String, dynamic>?; // Cast as a Map
       setState(() {
-        balance =
-            userData?['balance'] as num?; // Now we can use the [] operator
+        balance = userData?['balance'] as num?;
+        username = userData?['username'];
       });
     } catch (e) {
       // Handle the error or show a message
@@ -47,8 +48,8 @@ class _SettingsViewState extends State<SettingsView> {
       body: ListView(
         children: <Widget>[
           ListTile(
-            title: Text('Email:'),
-            subtitle: Text(_auth.currentUser?.email ?? 'N/A'),
+            title: Text('Welcome'),
+            subtitle: Text(username ?? 'N/A'),
           ),
           ListTile(
             title: Text('Balance'),
