@@ -10,6 +10,10 @@ import {onRequest} from "firebase-functions/v2/https";
 import {getFirestore} from "firebase-admin/firestore";
 import * as admin from "firebase-admin";
 
+import {tmpdir} from "os";
+import {join} from "path";
+import {promises as fs} from "fs";
+
 import {initializeApp} from "firebase-admin/app";
 
 const loadNBAGamesAddress = "https://loadnbagames-kca5bali4a-uc.a.run.app";
@@ -222,3 +226,47 @@ export const placeBet = onRequest(async (request, response) => {
 export const testHTTP = onRequest(async (request, response) => {
   response.send("Works");
 });
+
+export const importPredictionsJSONtoFirestore =
+  onRequest(async (request, response) => {
+    const bucketName = "ftp-sportsbook.appspot.com";
+    const filePath = "predictions.json";
+    const bucket = admin.storage().bucket(bucketName);
+
+    const tempFilePath = join(tmpdir(), "predictions.json");
+
+    // Download the file from the storage bucket.
+    try {
+      await bucket.file(filePath).download({
+        destination: tempFilePath,
+      });
+
+      // Read the JSON file.
+      const fileContent = await fs.readFile(tempFilePath, "utf8");
+      const predictionsArray = JSON.parse(fileContent);
+
+      // Loop through the array of predictions.
+      for (const prediction of predictionsArray) {
+        const {HOMETEAM, AWAYTEAM, PREDICTEDWINNER, PROBABILITY} = prediction;
+
+        // Firestore write.
+        await admin.firestore()
+          .collection("predictions")
+          .doc(HOMETEAM)
+          .collection("AWAYTEAMS")
+          .doc(AWAYTEAM)
+          .set({
+            predictedWinner: PREDICTEDWINNER,
+            probability: PROBABILITY,
+          });
+      }
+
+      // Clean up the temporary file.
+      await fs.unlink(tempFilePath);
+
+      response.send("JSON imported to Firestore successfully.");
+    } catch (error) {
+      console.error("JSON import failed:", error);
+      response.status(500).send("Internal Server Error");
+    }
+  });
