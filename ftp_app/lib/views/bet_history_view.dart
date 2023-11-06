@@ -79,7 +79,7 @@ class BetHistoryCard extends StatelessWidget {
             ),
             SizedBox(height: 8.0),
             Text(
-              'Amount: \$${amount.toStringAsFixed(2)}',
+              'Amount Wagered: \$${amount.toStringAsFixed(2)}',
               style: TextStyle(
                 fontSize: 16.0,
                 color: Colors.green,
