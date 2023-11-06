@@ -34,6 +34,7 @@ dependencies:
   http: ^0.13.3
   flutter_date_pickers: ^0.4.2
   intl: ^0.18.1
+  timezone: ^0.8.0
   flutter_svg: ^2.0.8
   flutter:
     sdk: flutter
