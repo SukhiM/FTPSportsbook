@@ -1,4 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+// Function to simulate the game between two teams
+Future<Map<String, dynamic>?> simulateGame(
+    String homeTeam, String awayTeam) async {
+  print('${homeTeam} vs ${awayTeam}');
+  try {
+    // Assuming you have 'predictions' as a top-level collection
+    // and 'awayTeams' as a subcollection inside each home team document
+    DocumentSnapshot predictionSnapshot = await FirebaseFirestore.instance
+        .collection('predictions')
+        .doc(homeTeam)
+        .collection('AWAYTEAMS')
+        .doc(awayTeam)
+        .get();
+
+    if (predictionSnapshot.exists) {
+      // Return the data of the prediction
+      return predictionSnapshot.data() as Map<String, dynamic>;
+    } else {
+      // Handle the case where there is no prediction
+      print("No prediction available for this matchup.");
+      return null;
+    }
+  } catch (e) {
+    // Handle any errors that occur during the Firestore query
+    print("Error simulating game: $e");
+    return null;
+  }
+}
 
 class SimulatorView extends StatefulWidget {
   @override
@@ -53,6 +83,33 @@ class _SimulatorViewState extends State<SimulatorView> {
         : _teams;
   }
 
+  void _showSimulationResult(Map<String, dynamic> result) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Simulation Result'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('Predicted Winner: ${result['predictedWinner']}'),
+                Text('Probability: ${result['probability']}%'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Close'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,10 +157,19 @@ class _SimulatorViewState extends State<SimulatorView> {
             ElevatedButton(
               onPressed: (_selectedHomeTeam != null &&
                       _selectedAwayTeam != null)
-                  ? () {
-                      // Logic for simulator
-                      print(
-                          'Simulating game between $_selectedHomeTeam and $_selectedAwayTeam');
+                  ? () async {
+                      var result = await simulateGame(
+                          _selectedHomeTeam!, _selectedAwayTeam!);
+                      if (result != null) {
+                        _showSimulationResult(result);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'No prediction data available for this matchup.'),
+                          ),
+                        );
+                      }
                     }
                   : null, // Button will be disabled if any team is not selected
               child: Text('Simulate Game'),
