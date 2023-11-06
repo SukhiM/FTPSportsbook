@@ -199,6 +199,16 @@ export const placeBet = onRequest(async (request, response) => {
       });
     });
 
+    const username = (await db.collection("users")
+      .doc(uid).get()).data()!.username;
+    const globalFeedRef = getFirestore().collection("global_feed");
+    globalFeedRef.add({
+      username: username,
+      team: team,
+      matchup: request.body.matchup,
+      placedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
     // If the transaction completes successfully, send back a success message
     response.status(200).send("Bet placed successfully");
   } catch (error) {
