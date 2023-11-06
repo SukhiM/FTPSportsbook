@@ -4,6 +4,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:flutter_date_pickers/flutter_date_pickers.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:flutter_svg/flutter_svg.dart';
@@ -38,25 +41,42 @@ class Game {
   final String team2;
   final DateTime date;
   final String gameID;
+  final String status;
+  final DateTime time;
 
   Game(
       {required this.gameID,
       required this.team1,
       required this.team2,
-      required this.date});
+      required this.date,
+      required this.status,
+      required this.time});
 
   factory Game.fromJson(Map<String, dynamic> json) {
     return Game(
       gameID: json['gameID'],
       team1: json['home'],
       team2: json['away'],
+      status: json['status'],
+      time: DateTime.parse(json['time']),
       date: DateTime.parse(json['date']),
     );
   }
 }
 
-String formatGameTime(DateTime date) {
-  return DateFormat('h:mm a').format(date);
+// String formatGameTime(DateTime date) {
+//   return DateFormat('h:mm a').format(date);
+// }
+
+String formatGameTime(DateTime utcDateTime) {
+  // Convert the UTC DateTime to the EST timezone
+  tz.initializeTimeZones();
+  tz.setLocalLocation(tz.getLocation('America/New_York'));
+
+  final estLocation = tz.getLocation('America/New_York');
+  final estDateTime = tz.TZDateTime.from(utcDateTime, estLocation);
+
+  return DateFormat('h:mm a').format(estDateTime);
 }
 
 void _placeBet(
@@ -228,6 +248,7 @@ class _HomeViewState extends State<HomeView> {
     String assetName =
         'assets/logos/$teamName.svg'; // Assuming team name matches the SVG filename
     String matchup = '${game.team1} @ ${game.team2}';
+    String gameStatus = game.status;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -250,9 +271,22 @@ class _HomeViewState extends State<HomeView> {
           ],
         ),
         ElevatedButton(
-          onPressed: () =>
-              _showBetAmountDialog(context, teamName, gameID, matchup),
-          child: Text("Bet"),
+          onPressed: (gameStatus == 'scheduled')
+              ? () {
+                  _showBetAmountDialog(context, teamName, gameID, matchup);
+                }
+              : null, // Disables the button if the status is null or closed
+          child: Text('Bet'),
+          style: ButtonStyle(
+            backgroundColor: MaterialStateProperty.resolveWith<Color>(
+              (Set<MaterialState> states) {
+                if (states.contains(MaterialState.disabled)) {
+                  return Colors.grey; // Disables color
+                }
+                return Theme.of(context).primaryColor; // Regular color
+              },
+            ),
+          ),
         ),
       ],
     );
@@ -326,7 +360,7 @@ class _HomeViewState extends State<HomeView> {
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Text(
-                                  formatGameTime(games[index].date),
+                                  formatGameTime(games[index].time),
                                   style: TextStyle(fontSize: 12),
                                 ),
                               ),
