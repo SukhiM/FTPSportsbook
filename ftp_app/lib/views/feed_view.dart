@@ -10,6 +10,8 @@ class SocialFeed extends StatefulWidget {
 }
 
 class _SocialFeedState extends State<SocialFeed> {
+  TextEditingController _postController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -22,43 +24,106 @@ class _SocialFeedState extends State<SocialFeed> {
     return DateFormat('MM-dd HH:mm').format(now);
   }
 
+  // Function to handle posting a new message to the social feed
+  void _postMessage() {
+    String message = _postController.text.trim();
+    if (message.isNotEmpty && message.length <= 80) {
+      // Add the message to Firestore
+      FirebaseFirestore.instance.collection('global_feed').add({
+        'username': 'User', // You can replace 'User' with the actual username
+        'message': message,
+        'placedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Clear the text field after posting
+      _postController.clear();
+    } else {
+      // Display an error or inform the user about the message length requirement
+      // You can use a Snackbar or another appropriate method.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text("Social Feed"),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('global_feed')
-            .orderBy('placedAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+      body: Column(
+        children: [
+          // Text field for entering the message
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _postController,
+              maxLength: 80,
+              decoration: InputDecoration(
+                hintText: 'Type your message (max 80 characters)',
+              ),
+            ),
+          ),
 
-          if (!snapshot.hasData) {
-            return Center(child: CircularProgressIndicator());
-          }
+          // Button to post the message
+          ElevatedButton(
+            onPressed: _postMessage,
+            child: Text('Share'),
+          ),
 
-          final bets = snapshot.data!.docs;
+          // Social Feed StreamBuilder
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('global_feed')
+                  .orderBy('placedAt', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
 
-          return ListView.builder(
-            itemCount: bets.length,
-            itemBuilder: (context, index) {
-              var bet = bets[index].data() as Map<String, dynamic>;
-              return Card(
-                margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                child: ListTile(
-                  title: Text('${bet['username']} bet on ${bet['team']}'),
-                  subtitle: Text('Game: ${bet['matchup']}'),
-                  trailing: Text(formatTimestamp(bet['placedAt'])),
-                ),
-              );
-            },
-          );
-        },
+                if (!snapshot.hasData) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                final feedItems = snapshot.data!.docs;
+
+                return ListView.builder(
+                  itemCount: feedItems.length,
+                  itemBuilder: (context, index) {
+                    var feedItem = feedItems[index].data() as Map<String, dynamic>;
+
+                    // Check if the item is a bet or a user message
+                    if (feedItem.containsKey('team')) {
+                      // Displaying a bet
+                      return Card(
+                        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                        child: ListTile(
+                          title: Text('${feedItem['username']} bet on ${feedItem['team']}'),
+                          subtitle: Text('Game: ${feedItem['matchup']}'),
+                          trailing: Text(formatTimestamp(feedItem['placedAt'])),
+                        ),
+                      );
+                    } else if (feedItem.containsKey('message')) {
+                      // Displaying a user message
+                      return Card(
+                        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                        child: ListTile(
+                          title: Text('${feedItem['username']} shared:'),
+                          subtitle: Text('${feedItem['message']}'),
+                          trailing: Text(formatTimestamp(feedItem['placedAt'])),
+                        ),
+                      );
+                    }
+
+                    // Add more conditions if there are other types of feed items
+
+                    return Container(); // Placeholder for unknown feed item types
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
