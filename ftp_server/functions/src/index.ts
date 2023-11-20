@@ -201,6 +201,10 @@ export const placeBet = onRequest(async (request, response) => {
         placedAt: admin.firestore.FieldValue.serverTimestamp(),
         // include other bet details as necessary
       });
+      db.collection("pending_bets").doc().set({
+        betRef: newBetRef,
+        uid: uid,
+      });
     });
 
     const username = (await db.collection("users")
