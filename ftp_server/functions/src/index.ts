@@ -141,7 +141,7 @@ export const placeBet = onRequest(async (request, response) => {
 
         const newBetRef = userRef.collection("bet_history").doc();
 
-        // Deduct the bet amount from the user's balance & add the bet to history
+        // Deduct the bet amount from the user's balance & add to history
         transaction.update(userRef, {balance: userBalance - amount});
         transaction.set(newBetRef, {
           gameID: gameID,
