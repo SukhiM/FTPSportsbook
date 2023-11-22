@@ -9,6 +9,7 @@
 import {onRequest} from "firebase-functions/v2/https";
 import {getFirestore} from "firebase-admin/firestore";
 import * as admin from "firebase-admin";
+import * as cors from "cors";
 
 import {tmpdir} from "os";
 import {join} from "path";
@@ -16,15 +17,11 @@ import {promises as fs} from "fs";
 
 import {initializeApp} from "firebase-admin/app";
 
-const loadNBAGamesAddress = "https://loadnbagames-kca5bali4a-uc.a.run.app";
-
+const corsHandler = cors({origin: true});
 initializeApp();
 
 const sportsRadarNBAKey = "pdmqy8pxggcnh6ejjbe8mdsz";
 // const oddsKey = "ea24407b8b130f7a2b2a3bf7401fe267";
-
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
 
 // Loads NBA Game data from SportsRadar API and stores in Firestore
 export const loadNBAGames = onRequest(async (request, response) => {
@@ -67,72 +64,33 @@ export const loadNBAGames = onRequest(async (request, response) => {
       status: status,
     });
   }
-
-  // const oddsResp = await fetch("https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?apiKey=" + oddsKey + "&regions=us&markets=h2h&bookmakers=draftkings");
-  // const oddsJSON = await oddsResp.json();
-
-  // for (const game of oddsJSON) {
-  //   const homeTeam = game.home_team;
-  //   const awayTeam = game.away_team;
-
-  //   const gameBoomaker = game.bookmakers[0].markets.outcomes;
-
-  //   const homeOdds = gameBoomaker[0].price;
-  //   const awayOdds = gameBoomaker[1].price;
-
-  //   // TODO: Find game in DB and update odds
-  // }
-
   response.status(200).send();
 });
 
 // Returns NBA Game data from Firestore for a given date
 export const getNBAGames = onRequest(async (request, response) => {
-  /*
-  TODO:
-  - Get the date from the request
-  - Query Firestore for games on date
-  - Return the games
-  */
+  corsHandler(request, response, async () => {
+    /*
+    TODO:
+    - Get the date from the request
+    - Query Firestore for games on date
+    - Return the games
+    */
 
-  const gamesList: any = [];
+    const gamesList: any = [];
 
-  // Date will be changed to be read from request body
-  const date = request.body.date;
-  const nbaGamesCollection = getFirestore().collection("nba_games")
-    .doc(date).collection("games").get();
-  (await nbaGamesCollection).forEach((doc) => {
-    const gameData = doc.data();
-    gameData.gameID = doc.id;
-    gamesList.push(gameData);
-  });
-
-  if (gamesList.isEmpty) {
-    const body = {
-      "date": date,
-    };
-
-    const loadNBAresponse = await fetch(loadNBAGamesAddress, {
-      method: "POST", // *GET, POST, PUT, DELETE, etc.
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
+    // Date will be changed to be read from request body
+    const date = request.body.date;
+    const nbaGamesCollection = getFirestore().collection("nba_games")
+      .doc(date).collection("games").get();
+    (await nbaGamesCollection).forEach((doc) => {
+      const gameData = doc.data();
+      gameData.gameID = doc.id;
+      gamesList.push(gameData);
     });
-    if (loadNBAresponse.status !== 200) {
-      console.log("Error loading NBA games");
-    } else {
-      const nbaGamesCollection = getFirestore().collection("nba_games")
-        .doc(date).collection("games").get();
-      (await nbaGamesCollection).forEach((doc) => {
-        const gameData = doc.data();
-        gameData.gameID = doc.id;
-        gamesList.push(gameData);
-      });
-    }
-  }
 
-  response.send(gamesList);
+    response.send(gamesList);
+  });
 });
 
 // Places a bet for a user on a game and stores in user's history
