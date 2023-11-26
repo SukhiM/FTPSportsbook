@@ -55,6 +55,7 @@ export const loadNBAGames = onRequest(async (request, response) => {
     const awayTeam = game.away.alias;
     const gameID = game.id;
     const status = game.status;
+
     nbaGamesCollection.doc(gameID).set({
       date: date,
       time: game.scheduled,
@@ -63,6 +64,18 @@ export const loadNBAGames = onRequest(async (request, response) => {
       id: gameID,
       status: status,
     });
+
+    if (status == "closed") {
+      if (game.home_points > game.away_points) {
+        nbaGamesCollection.doc(gameID).update({
+          winner: homeTeam,
+        });
+      } else {
+        nbaGamesCollection.doc(gameID).update({
+          winner: awayTeam,
+        });
+      }
+    }
   }
   response.status(200).send();
 });
@@ -70,13 +83,6 @@ export const loadNBAGames = onRequest(async (request, response) => {
 // Returns NBA Game data from Firestore for a given date
 export const getNBAGames = onRequest(async (request, response) => {
   corsHandler(request, response, async () => {
-    /*
-    TODO:
-    - Get the date from the request
-    - Query Firestore for games on date
-    - Return the games
-    */
-
     const gamesList: any = [];
 
     // Date will be changed to be read from request body
