@@ -138,6 +138,10 @@ export const placeBet = onRequest(async (request, response) => {
         const gameRef = db.collection("nba_games").doc(date)
           .collection("games").doc(gameID);
 
+        if (!gameRef) {
+          response.status(400).send("Can't find the game referenced");
+        }
+
         // Get the user's current balance by retrieving the snapshot first
         const userSnapshot = await transaction.get(userRef);
         const userData = userSnapshot.data();
@@ -151,6 +155,8 @@ export const placeBet = onRequest(async (request, response) => {
         }
 
         const newBetRef = userRef.collection("bet_history").doc();
+        const pendingBetRef = db.collection("pending_bets").doc();
+        const globalFeedPost = db.collection("global_feed").doc();
 
         // Deduct the bet amount from the user's balance & add to history
         transaction.update(userRef, {balance: userBalance - amount});
@@ -161,29 +167,27 @@ export const placeBet = onRequest(async (request, response) => {
           matchup: request.body.matchup,
           placedAt: admin.firestore.FieldValue.serverTimestamp(),
           status: "pending",
+          feedPost: globalFeedPost,
         });
-        db.collection("pending_bets").doc().set({
+
+        await globalFeedPost.set({
+          username: userData!.username,
+          team: team,
+          matchup: request.body.matchup,
+          placedAt: admin.firestore.FieldValue.serverTimestamp(),
+          betRef: newBetRef,
+        });
+        await pendingBetRef.set({
           betRef: newBetRef,
           gameRef: gameRef,
           uid: uid,
         });
-        const username = (await db.collection("users")
-          .doc(uid).get()).data()!.username;
-        const globalFeedPost = getFirestore().collection("global_feed")
-          .add({
-            username: username,
-            team: team,
-            matchup: request.body.matchup,
-            placedAt: admin.firestore.FieldValue.serverTimestamp(),
-            betRef: newBetRef,
-          });
-        transaction.update(newBetRef, {feedPost: globalFeedPost});
       });
       // If the transaction completes successfully, send back a success message
       response.status(200).send("Bet placed successfully");
     } catch (error) {
       console.error("Transaction failure:", error);
-      response.status(500).send("Transaction failure");
+      response.status(500).send("Transaction failure: " + error);
     }
 
     response.status(200).send();
@@ -237,3 +241,89 @@ export const importPredictionsJSONtoFirestore =
       response.status(500).send("Internal Server Error");
     }
   });
+
+// Updates games played for a date and runs through pending bets
+export const updateDay = onRequest(async (request, response) => {
+  corsHandler(request, response, async () => {
+    const db = getFirestore();
+
+    // Update status of games played
+    const formatDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).
+        toString().padStart(2, "0"); // Months are 0-based, hence +1
+      const day = date.getDate().toString().padStart(2, "0");
+
+      return `${year}/${month}/${day}`;
+    };
+
+    const reqDate = new Date();
+    reqDate.setDate(reqDate.getDate() - 1);
+    const date = formatDate(reqDate);
+
+    const resp: any = await fetch("http://api.sportradar.us/nba/trial/v8/en/games/" +
+      date + "/schedule.json?api_key=" + sportsRadarNBAKey);
+    const json = await resp.json();
+    const gamesArr = json.games;
+
+    const dbDateString = date.replace(/\//g, "-");
+
+    const nbaGamesCollection = db.collection("nba_games")
+      .doc(dbDateString).collection("games");
+
+    for (const game of gamesArr) {
+      try {
+        const gameID = game.id;
+        const status = game.status;
+        let winner;
+
+        if (status == "closed") {
+          if (game.home_points > game.away_points) {
+            winner = game.home.alias;
+          } else {
+            winner = game.away.alias;
+          }
+        }
+
+        await nbaGamesCollection.doc(gameID).update({
+          status: status,
+          winner: winner,
+        });
+      } catch (error) {
+        console.error("Error updating game: " + error);
+        response.status(500).send("Error updating game: " + error);
+      }
+    }
+
+    // Handle pending bets
+    const pendingBets = await db.collection("pending_bets").get();
+    for (const bet of pendingBets.docs) {
+      try {
+        const pendingBetData = bet.data();
+        const gameData = await pendingBetData.gameRef.get();
+        if (gameData.status != "closed") {
+          continue;
+        }
+        const userRef = db.collection("users").doc(pendingBetData.uid);
+        const betData = await pendingBetData.betRef.get();
+        const feedData = await pendingBetData.feedPost.get();
+
+        if (betData.team == gameData.winner) {
+          await betData.update({status: "won"});
+          await userRef.update({balance: admin.firestore.FieldValue
+            .increment(betData.amount * 2)});
+          await feedData.update({status: "won"});
+        } else {
+          await betData.update({status: "lost"});
+          await feedData.update({status: "lost"});
+        }
+        await bet.ref.delete();
+      } catch (error) {
+        console.error("Error handling pending bet: " + error);
+        response.status(500).send("Error handling pending bet: " + error);
+      }
+    }
+
+    response.status(200).send("Updated games and handled pending bets");
+  });
+});
