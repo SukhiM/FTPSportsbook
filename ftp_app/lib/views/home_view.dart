@@ -44,6 +44,7 @@ class Game {
   final String gameID;
   final String status;
   final DateTime time;
+  final String dateStr;
 
   Game(
       {required this.gameID,
@@ -51,7 +52,8 @@ class Game {
       required this.team2,
       required this.date,
       required this.status,
-      required this.time});
+      required this.time,
+      required this.dateStr});
 
   factory Game.fromJson(Map<String, dynamic> json) {
     return Game(
@@ -61,6 +63,7 @@ class Game {
       status: json['status'],
       time: DateTime.parse(json['time']),
       date: DateTime.parse(json['date']),
+      dateStr: json['date'],
     );
   }
 }
@@ -81,7 +84,7 @@ String formatGameTime(DateTime utcDateTime) {
 }
 
 void _placeBet(BuildContext context, String team, double amount, String gameID,
-    String matchup) async {
+    String matchup, String date) async {
   String uid =
       FirebaseAuth.instance.currentUser!.uid; // Replace with the actual user ID
 
@@ -97,6 +100,7 @@ void _placeBet(BuildContext context, String team, double amount, String gameID,
         'amount': amount,
         'gameID': gameID,
         'matchup': matchup,
+        'date': date,
       }),
     );
 
@@ -119,8 +123,8 @@ void _placeBet(BuildContext context, String team, double amount, String gameID,
   }
 }
 
-Future<void> _showBetAmountDialog(
-    BuildContext context, String team, String gameID, String matchup) async {
+Future<void> _showBetAmountDialog(BuildContext context, String team,
+    String gameID, String matchup, String date) async {
   TextEditingController _amountController = TextEditingController();
 
   return showDialog<void>(
@@ -151,7 +155,8 @@ Future<void> _showBetAmountDialog(
                   team,
                   double.tryParse(_amountController.text) ?? 0.0,
                   gameID,
-                  matchup);
+                  matchup,
+                  date);
               Navigator.of(dialogContext).pop();
             },
           ),
@@ -260,6 +265,7 @@ class _HomeViewState extends State<HomeView> {
         'assets/logos/$teamName.svg'; // Assuming team name matches the SVG filename
     String matchup = '${game.team1} @ ${game.team2}';
     String gameStatus = game.status;
+    String date = game.dateStr;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -284,7 +290,8 @@ class _HomeViewState extends State<HomeView> {
         ElevatedButton(
           onPressed: (gameStatus == 'scheduled')
               ? () {
-                  _showBetAmountDialog(context, teamName, gameID, matchup);
+                  _showBetAmountDialog(
+                      context, teamName, gameID, matchup, date);
                 }
               : null, // Disables the button if the status is null or closed
           child: Text('Bet'),
