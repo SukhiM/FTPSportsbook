@@ -32,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _login() async {
     if (_formKey.currentState!.validate()) {
       try {
-        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        await _auth.signInWithEmailAndPassword(
           email: _username,
           password: _password,
         );
