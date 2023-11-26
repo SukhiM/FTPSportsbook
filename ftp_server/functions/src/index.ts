@@ -168,6 +168,7 @@ export const placeBet = onRequest(async (request, response) => {
           placedAt: admin.firestore.FieldValue.serverTimestamp(),
           status: "pending",
           feedPost: globalFeedPost,
+          gameRef: gameRef,
         });
 
         await globalFeedPost.set({
