@@ -123,6 +123,11 @@ export const placeBet = onRequest(async (request, response) => {
       response.status(400).send("No amount provided");
       return;
     }
+    const date = request.body.date;
+    if (!date) {
+      response.status(400).send("No date provided");
+      return;
+    }
 
     try {
       const db = getFirestore();
@@ -130,6 +135,8 @@ export const placeBet = onRequest(async (request, response) => {
       // Start a transaction to ensure atomic read and write operations
       await db.runTransaction(async (transaction) => {
         const userRef = db.collection("users").doc(uid);
+        const gameRef = db.collection("nba_games").doc(date)
+          .collection("games").doc(gameID);
 
         // Get the user's current balance by retrieving the snapshot first
         const userSnapshot = await transaction.get(userRef);
@@ -153,24 +160,25 @@ export const placeBet = onRequest(async (request, response) => {
           team: team,
           matchup: request.body.matchup,
           placedAt: admin.firestore.FieldValue.serverTimestamp(),
-          // include other bet details as necessary
+          status: "pending",
         });
         db.collection("pending_bets").doc().set({
           betRef: newBetRef,
+          gameRef: gameRef,
           uid: uid,
         });
+        const username = (await db.collection("users")
+          .doc(uid).get()).data()!.username;
+        const globalFeedPost = getFirestore().collection("global_feed")
+          .add({
+            username: username,
+            team: team,
+            matchup: request.body.matchup,
+            placedAt: admin.firestore.FieldValue.serverTimestamp(),
+            betRef: newBetRef,
+          });
+        transaction.update(newBetRef, {feedPost: globalFeedPost});
       });
-
-      const username = (await db.collection("users")
-        .doc(uid).get()).data()!.username;
-      const globalFeedRef = getFirestore().collection("global_feed");
-      globalFeedRef.add({
-        username: username,
-        team: team,
-        matchup: request.body.matchup,
-        placedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
       // If the transaction completes successfully, send back a success message
       response.status(200).send("Bet placed successfully");
     } catch (error) {
