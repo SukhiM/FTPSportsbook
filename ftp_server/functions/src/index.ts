@@ -55,6 +55,15 @@ export const loadNBAGames = onRequest(async (request, response) => {
     const awayTeam = game.away.alias;
     const gameID = game.id;
     const status = game.status;
+    let winner = null;
+
+    if (status == "closed") {
+      if (game.home_points > game.away_points) {
+        winner = game.home.alias;
+      } else {
+        winner = game.away.alias;
+      }
+    }
 
     nbaGamesCollection.doc(gameID).set({
       date: date,
@@ -63,19 +72,8 @@ export const loadNBAGames = onRequest(async (request, response) => {
       away: awayTeam,
       id: gameID,
       status: status,
+      winner: winner,
     });
-
-    if (status == "closed") {
-      if (game.home_points > game.away_points) {
-        nbaGamesCollection.doc(gameID).update({
-          winner: homeTeam,
-        });
-      } else {
-        nbaGamesCollection.doc(gameID).update({
-          winner: awayTeam,
-        });
-      }
-    }
   }
   response.status(200).send();
 });
