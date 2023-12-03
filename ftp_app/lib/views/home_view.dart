@@ -1,27 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-
-import 'package:firebase_auth/firebase_auth.dart';
-
 import 'package:flutter_svg/flutter_svg.dart';
 
+import 'package:ftp_app/models/game.dart';
+
+import 'package:ftp_app/views/place_bet_view.dart';
 import 'package:ftp_app/views/settings_view.dart';
 import 'package:ftp_app/views/feed_view.dart';
 import 'package:ftp_app/views/simulate_view.dart';
 
 const String loadNBAGames = 'https://getnbagames-kca5bali4a-uc.a.run.app/';
-const String placeBet = 'https://placebet-kca5bali4a-uc.a.run.app/';
+
 Future<List<Game>> fetchGames([DateTime? date]) async {
   Map<String, String> requestBody = {
     "date": DateFormat('yyyy-MM-dd').format(date ?? DateTime.now())
   };
 
-  print(jsonEncode(requestBody));
+  print(jsonEncode(requestBody)); // Debugging print
 
   final response = await http.post(Uri.parse(loadNBAGames),
       headers: {
@@ -37,43 +36,8 @@ Future<List<Game>> fetchGames([DateTime? date]) async {
   }
 }
 
-class Game {
-  final String team1;
-  final String team2;
-  final DateTime date;
-  final String gameID;
-  final String status;
-  final DateTime time;
-  final String dateStr;
-
-  Game(
-      {required this.gameID,
-      required this.team1,
-      required this.team2,
-      required this.date,
-      required this.status,
-      required this.time,
-      required this.dateStr});
-
-  factory Game.fromJson(Map<String, dynamic> json) {
-    return Game(
-      gameID: json['gameID'],
-      team1: json['home'],
-      team2: json['away'],
-      status: json['status'],
-      time: DateTime.parse(json['time']),
-      date: DateTime.parse(json['date']),
-      dateStr: json['date'],
-    );
-  }
-}
-
-// String formatGameTime(DateTime date) {
-//   return DateFormat('h:mm a').format(date);
-// }
-
 String formatGameTime(DateTime utcDateTime) {
-  // Convert the UTC DateTime to the EST timezone
+  // Convert the UTC DateTime to the EST
   tz.initializeTimeZones();
   tz.setLocalLocation(tz.getLocation('America/New_York'));
 
@@ -83,87 +47,12 @@ String formatGameTime(DateTime utcDateTime) {
   return DateFormat('h:mm a').format(estDateTime);
 }
 
-void _placeBet(BuildContext context, String team, double amount, String gameID,
-    String matchup, String date) async {
-  String uid =
-      FirebaseAuth.instance.currentUser!.uid; // Replace with the actual user ID
-
-  try {
-    final response = await http.post(
-      Uri.parse(placeBet),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, dynamic>{
-        'uid': uid,
-        'team': team,
-        'amount': amount,
-        'gameID': gameID,
-        'matchup': matchup,
-        'date': date,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      print('Bet placed successfully');
-      // Handle successful response
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Bet placed successfully!')),
-      );
-    } else {
-      print('Failed to place bet: ${response.body}');
-      // Handle error response
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${response.body}')),
-      );
-    }
-  } catch (e) {
-    print('Error occurred while trying to place bet: $e');
-    // Handle any errors that occur during the POST request
-  }
-}
-
-Future<void> _showBetAmountDialog(BuildContext context, String team,
-    String gameID, String matchup, String date) async {
-  TextEditingController _amountController = TextEditingController();
-
-  return showDialog<void>(
-    context: context,
-    builder: (BuildContext dialogContext) {
-      return AlertDialog(
-        title: Text('Place bet on $team'),
-        content: TextField(
-          controller: _amountController,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            hintText: "Enter amount",
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: Text('Cancel'),
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-            },
-          ),
-          TextButton(
-            child: Text('Confirm'),
-            onPressed: () {
-              // Handle bet confirmation
-              _placeBet(
-                  context,
-                  team,
-                  double.tryParse(_amountController.text) ?? 0.0,
-                  gameID,
-                  matchup,
-                  date);
-              Navigator.of(dialogContext).pop();
-            },
-          ),
-        ],
-      );
-    },
-  );
+Future<void> _showPlaceBetScreen(
+    BuildContext context, Game selectedGame, String teamName) async {
+  Navigator.of(context).push(MaterialPageRoute(
+    builder: (context) =>
+        PlaceBetScreen(selectedGame: selectedGame, selectedTeam: teamName),
+  ));
 }
 
 class SportsbookHomeScreen extends StatefulWidget {
@@ -252,46 +141,31 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _teamLogo(String teamName) {
-    String assetName =
-        'assets/logos/$teamName.svg'; // Construct the asset name dynamically
+    String assetName = 'assets/logos/$teamName.svg';
     return SvgPicture.asset(assetName,
         height: 24, width: 24); // Adjust the size as needed
   }
 
   Widget _teamRow(Game game, bool isHomeTeam) {
     String teamName = isHomeTeam ? game.team1 : game.team2;
-    String gameID = game.gameID;
-    String assetName =
-        'assets/logos/$teamName.svg'; // Assuming team name matches the SVG filename
-    String matchup = '${game.team1} @ ${game.team2}';
     String gameStatus = game.status;
-    String date = game.dateStr;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
-          // Use nested row for logo and team name side by side
           children: [
             Padding(
-              padding: const EdgeInsets.only(
-                  left: 15.0), // Adjust this value for more/less padding
-              child: SvgPicture.asset(
-                assetName,
-                width: 24, // You can adjust these values
-                height: 24, // You can adjust these values
-                fit: BoxFit.contain,
-              ),
-            ),
-            SizedBox(width: 8), // Some spacing between logo and team name
+                padding: const EdgeInsets.only(left: 15.0),
+                child: _teamLogo(teamName)),
+            SizedBox(width: 8),
             Text(teamName),
           ],
         ),
         ElevatedButton(
           onPressed: (gameStatus == 'scheduled')
               ? () {
-                  _showBetAmountDialog(
-                      context, teamName, gameID, matchup, date);
+                  _showPlaceBetScreen(context, game, teamName);
                 }
               : null, // Disables the button if the status is null or closed
           child: Text('Bet'),
@@ -316,25 +190,9 @@ class _HomeViewState extends State<HomeView> {
       appBar: AppBar(title: Text('NBA Games')),
       body: Column(
         children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     DateFormat('MMMM d, y').format(_selectedDate),
-          //     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          //   ),
-          // ),
-
           ListTile(
-            // title: Text(
-            //   'NBA Games',
-            //   style: TextStyle(
-            //     fontWeight: FontWeight.bold,
-            //     color: Colors.blue[800],
-            //   ),
-            // ),
             subtitle: InkWell(
-              onTap: () => _selectDate(
-                  context), // Call the date picker function when the date is tapped
+              onTap: () => _selectDate(context),
               child: Text(
                 DateFormat('MMMM d, y').format(_selectedDate),
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -342,9 +200,8 @@ class _HomeViewState extends State<HomeView> {
             ),
             trailing: IconButton(
               icon: Icon(Icons.calendar_today),
-              onPressed: () =>
-                  _selectDate(context), // Triggers the date picker for the icon
-            ), // Optional icon for visual indication
+              onPressed: () => _selectDate(context),
+            ),
           ),
           Expanded(
             child: FutureBuilder<List<Game>>(
@@ -357,7 +214,10 @@ class _HomeViewState extends State<HomeView> {
 
                   List<Game> games = snapshot.data ?? [];
 
-                  // This is the updated ListView.builder
+                  if (games.isEmpty) {
+                    return Center(child: Text('No games scheduled'));
+                  }
+
                   return ListView.builder(
                     itemCount: games.length,
                     itemBuilder: (context, index) {
