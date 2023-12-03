@@ -44,16 +44,20 @@ class _SocialFeedState extends State<SocialFeed> {
     if (message.isNotEmpty && message.length <= 80) {
       // Add the message to Firestore
       FirebaseFirestore.instance.collection('global_feed').add({
-        'username': username, // You can replace 'User' with the actual username
+        'username': username,
         'message': message,
         'placedAt': FieldValue.serverTimestamp(),
+        'type': 'post',
       });
 
-      // Clear the text field after posting
       _postController.clear();
     } else {
-      // Display an error or inform the user about the message length requirement
-      // You can use a Snackbar or another appropriate method.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Message must be between 1 and 80 characters long. Please try again.'),
+        ),
+      );
     }
   }
 
@@ -77,13 +81,11 @@ class _SocialFeedState extends State<SocialFeed> {
             ),
           ),
 
-          // Button to post the message
           ElevatedButton(
             onPressed: _postMessage,
             child: Text('Share'),
           ),
 
-          // Social Feed StreamBuilder
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -107,9 +109,7 @@ class _SocialFeedState extends State<SocialFeed> {
                     var feedItem =
                         feedItems[index].data() as Map<String, dynamic>;
 
-                    // Check if the item is a bet or a user message
-                    if (feedItem.containsKey('team')) {
-                      // Displaying a bet
+                    if (feedItem['type'] == 'betslip') {
                       return Card(
                         margin:
                             EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -120,8 +120,7 @@ class _SocialFeedState extends State<SocialFeed> {
                           trailing: Text(formatTimestamp(feedItem['placedAt'])),
                         ),
                       );
-                    } else if (feedItem.containsKey('message')) {
-                      // Displaying a user message
+                    } else if (feedItem['type'] == 'post') {
                       return Card(
                         margin:
                             EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -131,11 +130,65 @@ class _SocialFeedState extends State<SocialFeed> {
                           trailing: Text(formatTimestamp(feedItem['placedAt'])),
                         ),
                       );
+                    } else if (feedItem['type'] == 'share') {
+                      return Card(
+                        margin:
+                            EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(feedItem['username']),
+                              SizedBox(height: 8),
+                              Text(
+                                feedItem['result'],
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                              Text(
+                                feedItem['matchup'],
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              if (feedItem['message'] != null &&
+                                  feedItem['message'].isNotEmpty)
+                                Text(
+                                  feedItem['message'],
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Amount Wagered: \$${feedItem['amount']}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.green,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Payout: \$${feedItem['payout']}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: feedItem['payout'] > 0
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
                     }
 
-                    // Add more conditions if there are other types of feed items
-
-                    return Container(); // Placeholder for unknown feed item types
+                    return Container(); // Return an empty container
                   },
                 );
               },
