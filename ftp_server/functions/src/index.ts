@@ -177,6 +177,7 @@ export const placeBet = onRequest(async (request, response) => {
           matchup: request.body.matchup,
           placedAt: admin.firestore.FieldValue.serverTimestamp(),
           betRef: newBetRef,
+          type: "betslip",
         });
         await pendingBetRef.set({
           betRef: newBetRef,
@@ -284,6 +285,8 @@ export const updateDay = onRequest(async (request, response) => {
           } else {
             winner = game.away.alias;
           }
+        } else {
+          continue;
         }
 
         await nbaGamesCollection.doc(gameID).update({
@@ -301,23 +304,33 @@ export const updateDay = onRequest(async (request, response) => {
     for (const bet of pendingBets.docs) {
       try {
         const pendingBetData = bet.data();
-        const gameData = await pendingBetData.gameRef.get();
+        const gameSnapshot = await pendingBetData.gameRef.get();
+        const gameData = gameSnapshot.data();
         if (gameData.status != "closed") {
           continue;
         }
+        if (!pendingBetData.gameRef) {
+          response.send("gameRef is undefined").status(403);
+        }
+
+        if (!pendingBetData.betRef) {
+          response.send("betRef is undefined").status(403);
+        }
         const userRef = db.collection("users").doc(pendingBetData.uid);
-        const betData = await pendingBetData.betRef.get();
-        const feedData = await pendingBetData.feedPost.get();
+        const betSnapshot = await pendingBetData.betRef.get();
+        const betData = betSnapshot.data();
+        const feedSnapshot = await betData.feedPost.get();
 
         if (betData.team == gameData.winner) {
-          await betData.update({status: "won"});
-          await userRef.update({balance: admin.firestore.FieldValue
-            .increment(betData.amount * 2)});
-          await feedData.update({status: "won"});
+          await betSnapshot.ref.update({status: "won"});
+          await userRef.update({balance:
+            admin.firestore.FieldValue.increment(betData.amount * 2)});
+          await feedSnapshot.ref.update({status: "won"});
         } else {
-          await betData.update({status: "lost"});
-          await feedData.update({status: "lost"});
+          await betSnapshot.ref.update({status: "lost"});
+          await feedSnapshot.ref.update({status: "lost"});
         }
+
         await bet.ref.delete();
       } catch (error) {
         console.error("Error handling pending bet: " + error);
@@ -326,5 +339,64 @@ export const updateDay = onRequest(async (request, response) => {
     }
 
     response.status(200).send("Updated games and handled pending bets");
+  });
+});
+
+export const shareBetSlip = onRequest(async (request, response) => {
+  corsHandler(request, response, async () => {
+    const uid = request.body.uid;
+    const betID = request.body.betID;
+    const message = request.body.message;
+
+    if (!uid) {
+      response.status(400).send("No user ID provided");
+      return;
+    }
+
+    if (!betID) {
+      response.status(400).send("No bet ID provided");
+      return;
+    }
+
+    if (!message) {
+      response.status(400).send("No message provided");
+      return;
+    }
+
+    const db = getFirestore();
+
+    try {
+      const userSnapshot = await db.collection("users").doc(uid).get();
+      const userData = userSnapshot.data();
+
+      const betSnapshot = await db.collection("users").doc(uid)
+        .collection("bet_history").doc(betID).get();
+      const betData = betSnapshot.data();
+
+      if (!betData) {
+        response.status(400).send("No bet data found");
+        return;
+      }
+
+      const result = betData.status === "lost" ?
+        `Lost ${betData.team} to win` : `Won ${betData.team} to win`;
+
+      const globalFeedPost = db.collection("global_feed").doc();
+
+      await globalFeedPost.set({
+        username: userData!.username,
+        message: message,
+        result: result,
+        matchup: betData.matchup,
+        amount: betData.amount,
+        payout: betData.payout ?? 0,
+        placedAt: admin.firestore.FieldValue.serverTimestamp(),
+        type: "share",
+      });
+    } catch (e) {
+      response.status(500).send(`Error sharing bet slip: ${e}`);
+    }
+
+    response.status(200).send();
   });
 });
