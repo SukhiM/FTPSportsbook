@@ -60,6 +60,41 @@ class _SocialFeedState extends State<SocialFeed> {
       );
     }
   }
+  Widget _buildUserProfile() {
+    var uid = FirebaseAuth.instance.currentUser?.uid;
+
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return CircularProgressIndicator();
+        }
+
+        var userData = snapshot.data?.data() as Map<String, dynamic>?;
+
+        if (userData == null) {
+          return Text('Error loading user data');
+        }
+
+        var profileImageUrl = userData['profileImageUrl'] ?? '';
+
+        return Row(
+          children: [
+            // Display profile picture in a circle avatar
+            CircleAvatar(
+              radius: 20,
+              backgroundImage: profileImageUrl.isNotEmpty
+                  ? NetworkImage(profileImageUrl) as ImageProvider<Object>
+                  : AssetImage('assets/default_profile_image.jpg') as ImageProvider<Object>,
+            ),
+
+            SizedBox(width: 10),
+            Text(userData['username'] ?? ''),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +105,8 @@ class _SocialFeedState extends State<SocialFeed> {
       body: Column(
         children: [
           // Text field for entering the message
+          //User Profile info
+          _buildUserProfile(),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
