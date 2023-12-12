@@ -21,7 +21,41 @@ const corsHandler = cors({origin: true});
 initializeApp();
 
 const sportsRadarNBAKey = "pdmqy8pxggcnh6ejjbe8mdsz";
-// const oddsKey = "ea24407b8b130f7a2b2a3bf7401fe267";
+const oddsKey = "ea24407b8b130f7a2b2a3bf7401fe267";
+const oddsURL = `https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?regions=us&oddsFormat=american&bookmakers=fanduel&apiKey=${oddsKey}`;
+
+const nbaTeamsMap = new Map<string, string>([
+  ["Atlanta Hawks", "ATL"],
+  ["Boston Celtics", "BOS"],
+  ["Brooklyn Nets", "BKN"],
+  ["Charlotte Hornets", "CHA"],
+  ["Chicago Bulls", "CHI"],
+  ["Cleveland Cavaliers", "CLE"],
+  ["Dallas Mavericks", "DAL"],
+  ["Denver Nuggets", "DEN"],
+  ["Detroit Pistons", "DET"],
+  ["Golden State Warriors", "GSW"],
+  ["Houston Rockets", "HOU"],
+  ["Indiana Pacers", "IND"],
+  ["Los Angeles Clippers", "LAC"],
+  ["Los Angeles Lakers", "LAL"],
+  ["Memphis Grizzlies", "MEM"],
+  ["Miami Heat", "MIA"],
+  ["Milwaukee Bucks", "MIL"],
+  ["Minnesota Timberwolves", "MIN"],
+  ["New Orleans Pelicans", "NOP"],
+  ["New York Knicks", "NYK"],
+  ["Oklahoma City Thunder", "OKC"],
+  ["Orlando Magic", "ORL"],
+  ["Philadelphia 76ers", "PHI"],
+  ["Phoenix Suns", "PHX"],
+  ["Portland Trail Blazers", "POR"],
+  ["Sacramento Kings", "SAC"],
+  ["San Antonio Spurs", "SAS"],
+  ["Toronto Raptors", "TOR"],
+  ["Utah Jazz", "UTA"],
+  ["Washington Wizards", "WAS"],
+]);
 
 // Loads NBA Game data from SportsRadar API and stores in Firestore
 export const loadNBAGames = onRequest(async (request, response) => {
@@ -95,6 +129,64 @@ export const getNBAGames = onRequest(async (request, response) => {
 
     response.send(gamesList);
   });
+});
+
+export const loadNBAOdds = onRequest(async (request, response) => {
+  const extractDate = (dateString: string): string => {
+    // Convert UTC timestamp to EST date
+    const date = new Date(dateString);
+    const estOffset = date.getTimezoneOffset() - 300;
+    const estDate = new Date(date.getTime() + estOffset * 60000);
+
+    const year = estDate.getFullYear();
+    const month = (estDate.getMonth() + 1).toString().padStart(2, "0");
+    const day = estDate.getDate().toString().padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
+  let json;
+  const gamesUpdated = [];
+
+  try {
+    const resp: any = await fetch(oddsURL);
+    json = await resp.json();
+    const gamesArr = json;
+    const nbaGamesCollection = getFirestore().collection("nba_games");
+
+    for (const game of gamesArr) {
+      const date = extractDate(game.commence_time);
+      const homeTeam = game.home_team;
+      const awayTeam = game.away_team;
+
+      if (game.bookmakers.empty) {
+        continue;
+      }
+
+      const dateRef = nbaGamesCollection.doc(date);
+      const gameQuery = await dateRef.collection("games")
+        .where("home", "==", nbaTeamsMap.get(homeTeam))
+        .where("away", "==", nbaTeamsMap.get(awayTeam)).get();
+
+      // Should only be one match for the query
+      if (!gameQuery.empty) {
+        const gameDoc = gameQuery.docs[0];
+        const gameRef = gameDoc.ref;
+
+        await gameRef.update({
+          homeOdds: game.bookmakers[0].markets[0].outcomes[0].price,
+          awayOdds: game.bookmakers[0].markets[0].outcomes[1].price,
+        });
+        gamesUpdated.push(gameRef.id);
+      } else {
+        continue;
+      }
+    }
+  } catch (error) {
+    response.status(500).send("Error loading NBA odds: " + error);
+  }
+
+  response.status(200).send(gamesUpdated);
 });
 
 // Places a bet for a user on a game and stores in user's history
@@ -194,10 +286,6 @@ export const placeBet = onRequest(async (request, response) => {
 
     response.status(200).send();
   });
-});
-
-export const testHTTP = onRequest(async (request, response) => {
-  response.send("Works");
 });
 
 export const importPredictionsJSONtoFirestore =
