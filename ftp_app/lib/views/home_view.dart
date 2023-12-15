@@ -47,7 +47,7 @@ String formatGameTime(DateTime utcDateTime) {
   return DateFormat('h:mm a').format(estDateTime);
 }
 
-Future<void> _showPlaceBetScreen(
+Future<void> _showPlaceBetPopup(
     BuildContext context, Game selectedGame, String teamName) async {
   Navigator.of(context).push(MaterialPageRoute(
     builder: (context) =>
@@ -164,10 +164,11 @@ class _HomeViewState extends State<HomeView> {
         ),
         ElevatedButton(
           onPressed: (gameStatus == 'scheduled')
-              ? () {
-                  _showPlaceBetScreen(context, game, teamName);
-                }
-              : null, // Disables the button if the status is null or closed
+            ? () async {
+              // Show the popup
+              await _showPlaceBetPopup(context, game, teamName);
+            }
+            : null, // Disables the button if the status is null or closed // Disables the button if the status is null or closed
           child: Text('Bet'),
           style: ButtonStyle(
             backgroundColor: MaterialStateProperty.resolveWith<Color>(

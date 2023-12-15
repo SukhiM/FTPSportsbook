@@ -10,6 +10,8 @@ class SocialFeed extends StatefulWidget {
   _SocialFeedState createState() => _SocialFeedState();
 }
 
+
+
 class _SocialFeedState extends State<SocialFeed> {
   TextEditingController _postController = TextEditingController();
 
@@ -23,6 +25,40 @@ class _SocialFeedState extends State<SocialFeed> {
     var estZone = tz.getLocation('America/New_York');
     var now = tz.TZDateTime.from(timestamp.toDate(), estZone);
     return DateFormat('MM-dd HH:mm').format(now);
+  }
+
+  // Popup for creating posts 
+  void _openPostCreationPopup(BuildContext context) async {
+    // Get the message from the TextField controller in the popup
+    String? message = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Create a Post"),
+        content: TextField(
+          controller: _postController,
+          maxLength: 80,
+          decoration: InputDecoration(
+            hintText: "What's on your mind?",
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, _postController.text),
+            child: Text("Post"),
+          ),
+        ],
+      ),
+    );
+
+    // Check if message is not null (meaning the user clicked "Post")
+    if (message != null) {
+      // Call your actual post sending logic with the message
+      _postMessage();
+    }
   }
 
   // Function to handle posting a new message to the social feed
@@ -96,33 +132,25 @@ class _SocialFeedState extends State<SocialFeed> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Social Feed"),
-      ),
-      body: Column(
-        children: [
-          // Text field for entering the message
-          //User Profile info
-          _buildUserProfile(),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _postController,
-              maxLength: 80,
-              decoration: InputDecoration(
-                hintText: 'Type your message (max 80 characters)',
-              ),
-            ),
-          ),
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Text("Social Feed"),
+    ),
+    body: Column(
+      children: [
+        // ... User profile information if you want to display it
+        _buildUserProfile(),
 
-          ElevatedButton(
-            onPressed: _postMessage,
-            child: Text('Share'),
+        // Button to open the post creation popup
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: ElevatedButton(
+            onPressed: () => _openPostCreationPopup(context),
+            child: Text('Create a Post'),
           ),
-
+        ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
