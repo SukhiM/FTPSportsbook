@@ -20,7 +20,7 @@ import {initializeApp} from "firebase-admin/app";
 const corsHandler = cors({origin: true});
 initializeApp();
 
-const sportsRadarNBAKey = "pdmqy8pxggcnh6ejjbe8mdsz";
+const sportsRadarNBAKey = "hrp6kre4tcfrdxnychgx7uqg";
 const oddsKey = "ea24407b8b130f7a2b2a3bf7401fe267";
 const oddsURL = `https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?regions=us&oddsFormat=american&bookmakers=fanduel&apiKey=${oddsKey}`;
 
@@ -68,48 +68,52 @@ export const loadNBAGames = onRequest(async (request, response) => {
     return `${year}/${month}/${day}`;
   };
 
-  let passedDate: Date;
-  if (!request.body.date) {
-    passedDate = new Date();
-  } else {
-    passedDate = new Date(request.body.date);
-  }
-  const reqDate = formatDate(passedDate);
-  const resp: any = await fetch("http://api.sportradar.us/nba/trial/v8/en/games/" +
-    reqDate + "/schedule.json?api_key=" + sportsRadarNBAKey);
-  const json = await resp.json();
-  const date = json.date;
-  const gamesArr = json.games;
-
-  const nbaGamesCollection = getFirestore().collection("nba_games")
-    .doc(date).collection("games");
-
-  for (const game of gamesArr) {
-    const homeTeam = game.home.alias;
-    const awayTeam = game.away.alias;
-    const gameID = game.id;
-    const status = game.status;
-    let winner = null;
-
-    if (status == "closed") {
-      if (game.home_points > game.away_points) {
-        winner = game.home.alias;
-      } else {
-        winner = game.away.alias;
-      }
+  try {
+    let passedDate: Date;
+    if (!request.body.date) {
+      passedDate = new Date();
+    } else {
+      passedDate = new Date(request.body.date);
     }
+    const reqDate = formatDate(passedDate);
+    const resp: any = await fetch("http://api.sportradar.us/nba/trial/v8/en/games/" +
+      reqDate + "/schedule.json?api_key=" + sportsRadarNBAKey);
+    const json = await resp.json();
+    const date = json.date;
+    const gamesArr = json.games;
 
-    nbaGamesCollection.doc(gameID).set({
-      date: date,
-      time: game.scheduled,
-      home: homeTeam,
-      away: awayTeam,
-      id: gameID,
-      status: status,
-      winner: winner,
-    });
+    const nbaGamesCollection = getFirestore().collection("nba_games")
+      .doc(date).collection("games");
+
+    for (const game of gamesArr) {
+      const homeTeam = game.home.alias;
+      const awayTeam = game.away.alias;
+      const gameID = game.id;
+      const status = game.status;
+      let winner = null;
+
+      if (status == "closed") {
+        if (game.home_points > game.away_points) {
+          winner = game.home.alias;
+        } else {
+          winner = game.away.alias;
+        }
+      }
+
+      nbaGamesCollection.doc(gameID).set({
+        date: date,
+        time: game.scheduled,
+        home: homeTeam,
+        away: awayTeam,
+        id: gameID,
+        status: status,
+        winner: winner,
+      });
+    }
+    response.status(200).send();
+  } catch (error) {
+    response.status(500).send("Error loading NBA games: " + error);
   }
-  response.status(200).send();
 });
 
 // Returns NBA Game data from Firestore for a given date
