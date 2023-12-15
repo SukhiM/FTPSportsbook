@@ -156,10 +156,10 @@ class _HomeViewState extends State<HomeView> {
         Row(
           children: [
             Padding(
-                padding: const EdgeInsets.only(left: 15.0),
+                padding: const EdgeInsets.only(right: 8.0),
                 child: _teamLogo(teamName)),
             SizedBox(width: 8),
-            Text(teamName),
+            Text(teamName)
           ],
         ),
         ElevatedButton(
@@ -168,15 +168,15 @@ class _HomeViewState extends State<HomeView> {
               // Show the popup
               await _showPlaceBetPopup(context, game, teamName);
             }
-            : null, // Disables the button if the status is null or closed // Disables the button if the status is null or closed
-          child: Text('Bet'),
+            : null, // Disables the button if the status is null or closed
+          child: Text('Place a Bet'),
           style: ButtonStyle(
             backgroundColor: MaterialStateProperty.resolveWith<Color>(
               (Set<MaterialState> states) {
                 if (states.contains(MaterialState.disabled)) {
                   return Colors.grey; // Disables color
                 }
-                return Theme.of(context).primaryColor; // Regular color
+                return Colors.blue; // Themed color, different than text color
               },
             ),
           ),
