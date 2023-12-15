@@ -156,9 +156,9 @@ class _HomeViewState extends State<HomeView> {
         Row(
           children: [
             Padding(
-                padding: const EdgeInsets.only(right: 8.0),
+                padding: const EdgeInsets.only(right: 5.0, left: 5.0, top: 10.0, bottom: 10.0),
                 child: _teamLogo(teamName)),
-            SizedBox(width: 8),
+            SizedBox(width: 20),
             Text(teamName)
           ],
         ),
