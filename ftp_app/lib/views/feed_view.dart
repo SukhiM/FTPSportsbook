@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:firebase_auth/firebase_auth.dart';
-
+enum FeedCategory {All, WinningBets, LosingBets }
 class SocialFeed extends StatefulWidget {
   @override
   _SocialFeedState createState() => _SocialFeedState();
@@ -26,6 +26,8 @@ class _SocialFeedState extends State<SocialFeed> {
     var now = tz.TZDateTime.from(timestamp.toDate(), estZone);
     return DateFormat('MM-dd HH:mm').format(now);
   }
+
+  FeedCategory selectedCategory = FeedCategory.All;
 
   // Popup for creating posts 
   void _openPostCreationPopup(BuildContext context) async {
@@ -137,6 +139,31 @@ Widget build(BuildContext context) {
   return Scaffold(
     appBar: AppBar(
       title: Text("Social Feed"),
+      actions: [
+        // Dropdown button for category selection
+        DropdownButton<FeedCategory>(
+          value: selectedCategory,
+          onChanged: (FeedCategory? value) {
+            setState(() {
+              selectedCategory = value!;
+             });
+          },
+          items: [
+            DropdownMenuItem(
+              value: FeedCategory.All,
+              child: Text('All'),
+             ),
+            DropdownMenuItem(
+              value: FeedCategory.WinningBets,
+              child: Text('Winning Bets'),
+             ),
+             DropdownMenuItem(
+               value: FeedCategory.LosingBets,
+               child: Text('Losing Bets'),
+               ),
+              ],
+            ),
+      ],
     ),
     body: Column(
       children: [
@@ -167,7 +194,19 @@ Widget build(BuildContext context) {
                 }
 
                 final feedItems = snapshot.data!.docs;
+               // Filter feed items based on selected category
+                var filteredFeedItems = feedItems.where((feedItem) {
+                var type = feedItem['type'];
 
+                if (selectedCategory == FeedCategory.All) {
+                return true;
+               } else if (selectedCategory == FeedCategory.WinningBets) {
+                 return type == 'betslip' && feedItem['payout'] > 0;
+               } else if (selectedCategory == FeedCategory.LosingBets) {
+                  return type == 'betslip' && feedItem['payout'] <= 0;
+               }
+                return false;
+               }).toList();
                 return ListView.builder(
                   itemCount: feedItems.length,
                   itemBuilder: (context, index) {
