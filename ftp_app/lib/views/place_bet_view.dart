@@ -7,6 +7,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:ftp_app/models/game.dart';
 
+import 'dart:math' as math;
+
 const String placeBet = 'https://placebet-kca5bali4a-uc.a.run.app/';
 
 void _placeBet(BuildContext context, String team, double amount, String gameID,
@@ -61,13 +63,19 @@ class PlaceBetScreen extends StatefulWidget {
 
 class _PlaceBetScreenState extends State<PlaceBetScreen> {
   final TextEditingController _amountController = TextEditingController();
-  double _estimatedPayout = 0.0;
+  String _estimatedPayout = "0.0";
 
   void _calculatePayout(String amount) {
     double enteredAmount = double.tryParse(amount) ?? 0.00;
     setState(() {
-      _estimatedPayout =
-          enteredAmount + enteredAmount * (widget.odds / 100);
+      if (widget.odds >= 0){
+        _estimatedPayout =
+            (enteredAmount + enteredAmount * (widget.odds / 100)).toStringAsFixed(2);
+      }
+      else{
+        _estimatedPayout =
+            (enteredAmount + enteredAmount * (100 / widget.odds.abs())).toStringAsFixed(2);
+      }
     });
   }
 
