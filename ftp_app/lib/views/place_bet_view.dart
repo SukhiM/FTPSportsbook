@@ -49,7 +49,7 @@ void _placeBet(BuildContext context, String team, double amount, String gameID,
 class PlaceBetScreen extends StatefulWidget {
   final Game selectedGame;
   final String selectedTeam;
-  var probability; // Get probability as well for odds calculations
+  final num probability; // Get probability as well for odds calculations
 
    PlaceBetScreen(
       {Key? key, required this.selectedGame, required this.selectedTeam, required this.probability})

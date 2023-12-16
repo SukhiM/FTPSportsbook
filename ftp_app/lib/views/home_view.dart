@@ -58,55 +58,81 @@ Future<void> _showPlaceBetPopup(
 }
 
 // Function to return winning team and probability of said win between two given teams
-Future<Map<String, dynamic>?> createOdds(
-    String homeTeam, String awayTeam) async {
-  try {
-    // Assuming you have 'predictions' as a top-level collection
-    // and 'awayTeams' as a subcollection inside each home team document
-    DocumentSnapshot predictionSnapshot = await FirebaseFirestore.instance
-        .collection('predictions')
-        .doc(homeTeam)
-        .collection('AWAYTEAMS')
-        .doc(awayTeam)
-        .get();
+// Future<Map<String, dynamic>?> fetchOdds(
+//     String homeTeam, String awayTeam) async {
+//   try {
+//     // Assuming you have 'predictions' as a top-level collection
+//     // and 'awayTeams' as a subcollection inside each home team document
+//     DocumentSnapshot predictionSnapshot = await FirebaseFirestore.instance
+//         .collection('predictions')
+//         .doc(homeTeam)
+//         .collection('AWAYTEAMS')
+//         .doc(awayTeam)
+//         .get();
 
-    if (predictionSnapshot.exists) {
-      return predictionSnapshot.data() as Map<String, dynamic>;
-    } else {
-      // Handle the case where there is no prediction
-      print("No prediction available for this matchup.");
-      return null;
+//     if (predictionSnapshot.exists) {
+//       return predictionSnapshot.data() as Map<String, dynamic>;
+//     } else {
+//       // Handle the case where there is no prediction
+//       print("No prediction available for this matchup.");
+//       return null;
+//     }
+//   } catch (e) {
+//     // Handle any errors that occur during the Firestore query
+//     print("Error simulating game: $e");
+//     return null;
+//   }
+// }
+
+Future<num> fetchOdds(String teamName) async {
+  DateTime today = DateTime.now();
+  String formattedDate = DateFormat('yyyy-MM-dd').format(today);
+  QuerySnapshot predictionSnapshot = await FirebaseFirestore.instance
+      .collection('nba_games')
+      .doc(formattedDate)
+      .collection('games')
+      .get();
+
+  for (var document in predictionSnapshot.docs) {
+    String homeTeam = document.get('home');
+    String awayTeam = document.get('away');
+
+    if (teamName == homeTeam){
+      return document.get('homeOdds');
     }
-  } catch (e) {
-    // Handle any errors that occur during the Firestore query
-    print("Error simulating game: $e");
-    return null;
+    if (teamName == awayTeam){
+      return document.get('awayOdds');
+    }
   }
+
+  return 0; // Failed to fetch data
 }
+
+
 
 // Calculate odds 
-Future<double> calculateWinningProbability(
-    String homeTeam, String awayTeam) async {
-  final odds = await createOdds(homeTeam, awayTeam);
+// Future<double> calculateWinningProbability(
+//     String homeTeam, String awayTeam) async {
+//   final odds = await fetchOdds(homeTeam, awayTeam);
 
-  if (odds == null) {
-    return 0.0;
-  }
+//   if (odds == null) {
+//     return 0.0;
+//   }
 
-  // Determine the winning team based on 'predictedWinner'
-  final winningTeam = odds["predictedWinner"];
+//   // Determine the winning team based on 'predictedWinner'
+//   final winningTeam = odds["predictedWinner"];
 
-  // Extract the probability for home team and away team
-  final probability = winningTeam == homeTeam ? odds["probability"] : 100.00 - odds["probability"];
-  print("WInning team");
-  print(winningTeam);
-  print("Home Team: ");
-  print(homeTeam);
-  print("Probability:");
-  print(probability);
-  print(100.0 - probability);
-  return probability;
-}
+//   // Extract the probability for home team and away team
+//   final probability = winningTeam == homeTeam ? odds["probability"] : 100.00 - odds["probability"];
+//   print("WInning team");
+//   print(winningTeam);
+//   print("Home Team: ");
+//   print(homeTeam);
+//   print("Probability:");
+//   print(probability);
+//   print(100.0 - probability);
+//   return probability;
+// }
 
 
 class SportsbookHomeScreen extends StatefulWidget {
@@ -204,10 +230,10 @@ class _HomeViewState extends State<HomeView> {
     String teamName = isHomeTeam ? game.team1 : game.team2;
     String gameStatus = game.status;
 
-    
-    var homeProbabilityFuture = calculateWinningProbability(game.team1, game.team2);
-    var awayProbabilityFuture = calculateWinningProbability(game.team2, game.team1);
-    var winningTeam = isHomeTeam ? homeProbabilityFuture : awayProbabilityFuture; // Send correct team probability to PlaceBetPopup
+    var odds = fetchOdds(teamName);
+    //var homeProbabilityFuture = calculateWinningProbability(game.team1, game.team2);
+    //var awayProbabilityFuture = calculateWinningProbability(game.team2, game.team1);
+    //var winningTeam = isHomeTeam ? homeProbabilityFuture : awayProbabilityFuture; // Send correct team probability to PlaceBetPopup
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -224,8 +250,9 @@ class _HomeViewState extends State<HomeView> {
         ElevatedButton(
           onPressed: (gameStatus == 'scheduled')
             ? () async {
-              num probability = await winningTeam;
+              // num probability = await winningTeam;
               // Show the popup
+              num probability = await odds;
               await _showPlaceBetPopup(context, game, teamName, probability);
             }
             : null, // Disables the button if the status is null or closed
@@ -239,16 +266,16 @@ class _HomeViewState extends State<HomeView> {
               },
             ),
           ),
-          child: FutureBuilder<List<dynamic>>(
-            future: Future.wait([homeProbabilityFuture, awayProbabilityFuture]),
+          child: FutureBuilder<List<num>>(
+            future: Future.wait([fetchOdds(game.team1), fetchOdds(game.team2)]),
             builder: (context, snapshot) {
               if (snapshot.hasData) {
-                final homeProbability = snapshot.data![0];
-                final awayProbability = snapshot.data![1];
+                final num team1 = snapshot.data![0];
+                final num team2 = snapshot.data![1];
                 return Text(
                   isHomeTeam
-                      ? 'Place a Bet at ${(homeProbability).toStringAsFixed(2)}%'
-                      : 'Place a Bet at ${(awayProbability).toStringAsFixed(2)}%',
+                      ? 'Odds: ${team1}'
+                      : 'Odds: ${team2}',
                 );
               } else {
                 return Text('...'); // Loading indicator
