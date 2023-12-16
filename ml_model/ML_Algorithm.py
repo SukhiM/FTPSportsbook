@@ -49,8 +49,6 @@ class NBAResultsPredictor:
         test_accuracy = self.model.score(X_test, y_test)
         print("Test Accuracy:", test_accuracy)
 
-        # Fit the model to the training data
-        # self.model.fit(X_train, y_train)
 
 
     def predict_winning_team(self, home_team, away_team):
@@ -88,7 +86,7 @@ class NBAResultsPredictor:
             writer = csv.writer(f)
             writer.writerow(["HOMETEAM", "AWAYTEAM", "PREDICTEDWINNER", "PROBABILITY"])
         for i in range(self.df3.size):
-            for j in range(i + 1, self.df3.size): # range is correct, 435 outputs for 30 teams is every combination
+            for j in range(self.df3.size): # range is correct, 870 outputs for 30 teams is every combination
                 if i != j:
                     c = c + 1
                     # Write the prediction to the CSV file
