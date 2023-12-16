@@ -29,6 +29,7 @@ class SportsbookApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'FTP App',
       home: StreamBuilder<User?>(
         stream: _auth.authStateChanges(),
