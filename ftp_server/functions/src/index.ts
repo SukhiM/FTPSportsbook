@@ -163,7 +163,7 @@ export const loadNBAOdds = onRequest(async (request, response) => {
       const homeTeam = game.home_team;
       const awayTeam = game.away_team;
 
-      if (game.bookmakers.empty) {
+      if (game.bookmakers.length == 0) {
         continue;
       }
 
@@ -177,9 +177,20 @@ export const loadNBAOdds = onRequest(async (request, response) => {
         const gameDoc = gameQuery.docs[0];
         const gameRef = gameDoc.ref;
 
+        let homeOdds;
+        let awayOdds;
+
+        if (homeTeam == game.bookmakers[0].markets[0].outcomes[0].name) {
+          homeOdds = game.bookmakers[0].markets[0].outcomes[0].price;
+          awayOdds = game.bookmakers[0].markets[0].outcomes[1].price;
+        } else {
+          homeOdds = game.bookmakers[0].markets[0].outcomes[1].price;
+          awayOdds = game.bookmakers[0].markets[0].outcomes[0].price;
+        }
+
         await gameRef.update({
-          homeOdds: game.bookmakers[0].markets[0].outcomes[0].price,
-          awayOdds: game.bookmakers[0].markets[0].outcomes[1].price,
+          homeOdds: homeOdds,
+          awayOdds: awayOdds,
         });
         gamesUpdated.push(gameRef.id);
       } else {
@@ -187,7 +198,8 @@ export const loadNBAOdds = onRequest(async (request, response) => {
       }
     }
   } catch (error) {
-    response.status(500).send("Error loading NBA odds: " + error);
+    response.status(500)
+      .send(`Error loading NBA odds: ${error}`);
   }
 
   response.status(200).send(gamesUpdated);
