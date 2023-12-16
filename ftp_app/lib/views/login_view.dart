@@ -26,23 +26,20 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _auth = FirebaseAuth.instance;
-  String _username = ''; // Assuming this is an email for Firebase Auth
+  String _email = '';
   String _password = '';
 
   void _login() async {
     if (_formKey.currentState!.validate()) {
       try {
         await _auth.signInWithEmailAndPassword(
-          email: _username,
+          email: _email,
           password: _password,
         );
 
         // Successful login. Navigate to home screen or show a success message
-        Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-                builder: (context) =>
-                    SportsbookHomeScreen())); // Assuming you have a HomeScreen widget
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (context) => SportsbookHomeScreen()));
       } catch (e) {
         // Handle authentication error, show a message to the user
         ScaffoldMessenger.of(context).showSnackBar(
@@ -65,15 +62,15 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             children: <Widget>[
               TextFormField(
-                decoration: InputDecoration(labelText: 'Username'),
+                decoration: InputDecoration(labelText: 'Email'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter your username';
+                    return 'Please enter your email';
                   }
                   return null;
                 },
                 onChanged: (value) {
-                  _username = value;
+                  _email = value;
                 },
               ),
               SizedBox(height: 16.0),
