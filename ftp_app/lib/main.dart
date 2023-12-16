@@ -11,6 +11,7 @@ const String messagingSenderId = '307152432106';
 const String projectId = 'ftp-sportsbook';
 
 void main() async {
+  ErrorWidget.builder = (FlutterErrorDetails details) => Container();
   // Ensure that Firebase is initialized
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
