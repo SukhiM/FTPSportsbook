@@ -53,7 +53,7 @@ Future<void> _showPlaceBetPopup(
     BuildContext context, Game selectedGame, String teamName, num probability) async {
   Navigator.of(context).push(MaterialPageRoute(
     builder: (context) =>
-        PlaceBetScreen(selectedGame: selectedGame, selectedTeam: teamName, probability: probability),
+        PlaceBetScreen(selectedGame: selectedGame, selectedTeam: teamName, odds: probability),
   ));
 }
 

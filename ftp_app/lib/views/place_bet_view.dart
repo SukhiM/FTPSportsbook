@@ -49,10 +49,10 @@ void _placeBet(BuildContext context, String team, double amount, String gameID,
 class PlaceBetScreen extends StatefulWidget {
   final Game selectedGame;
   final String selectedTeam;
-  final num probability; // Get probability as well for odds calculations
+  final num odds; // Get odds as well for payout calculations
 
    PlaceBetScreen(
-      {Key? key, required this.selectedGame, required this.selectedTeam, required this.probability})
+      {Key? key, required this.selectedGame, required this.selectedTeam, required this.odds})
       : super(key: key);
 
   @override
@@ -67,7 +67,7 @@ class _PlaceBetScreenState extends State<PlaceBetScreen> {
     double enteredAmount = double.tryParse(amount) ?? 0.00;
     setState(() {
       _estimatedPayout =
-          enteredAmount + enteredAmount * ((100 - widget.probability) / 100);
+          enteredAmount + enteredAmount * (widget.odds / 100);
     });
   }
 
