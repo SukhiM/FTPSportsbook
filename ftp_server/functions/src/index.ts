@@ -119,19 +119,23 @@ export const loadNBAGames = onRequest(async (request, response) => {
 // Returns NBA Game data from Firestore for a given date
 export const getNBAGames = onRequest(async (request, response) => {
   corsHandler(request, response, async () => {
-    const gamesList: any = [];
+    try {
+      const gamesList: any = [];
 
-    // Date will be changed to be read from request body
-    const date = request.body.date;
-    const nbaGamesCollection = getFirestore().collection("nba_games")
-      .doc(date).collection("games").get();
-    (await nbaGamesCollection).forEach((doc) => {
-      const gameData = doc.data();
-      gameData.gameID = doc.id;
-      gamesList.push(gameData);
-    });
+      // Date will be changed to be read from request body
+      const date = request.body.date;
+      const nbaGamesCollection = getFirestore().collection("nba_games")
+        .doc(date).collection("games").get();
+      (await nbaGamesCollection).forEach((doc) => {
+        const gameData = doc.data();
+        gameData.gameID = doc.id;
+        gamesList.push(gameData);
+      });
 
-    response.send(gamesList);
+      response.send(gamesList);
+    } catch (error) {
+      response.status(500).send("Error getting NBA games: " + error);
+    }
   });
 });
 
