@@ -84,8 +84,8 @@ Future<void> _showPlaceBetPopup(
 //   }
 // }
 
-Future<num> fetchOdds(String teamName) async {
-  DateTime today = DateTime.now();
+Future<num> fetchOdds(String teamName, DateTime _selectedDate) async {
+  DateTime today = _selectedDate;
   String formattedDate = DateFormat('yyyy-MM-dd').format(today);
   QuerySnapshot predictionSnapshot = await FirebaseFirestore.instance
       .collection('nba_games')
@@ -97,10 +97,15 @@ Future<num> fetchOdds(String teamName) async {
     String homeTeam = document.get('home');
     String awayTeam = document.get('away');
 
+
     if (teamName == homeTeam){
+      //print("HomeTeam: ");
+      //print(document.get('homeOdds'));
       return document.get('homeOdds');
     }
     if (teamName == awayTeam){
+      //print("Away Team");
+      //print(document.get('awayOdds'));
       return document.get('awayOdds');
     }
   }
@@ -226,11 +231,11 @@ class _HomeViewState extends State<HomeView> {
         height: 24, width: 24); // Adjust the size as needed
   }
 
-  Widget _teamRow(Game game, bool isHomeTeam) {
+  Widget _teamRow(Game game, bool isHomeTeam, DateTime _selectedDate) {
     String teamName = isHomeTeam ? game.team1 : game.team2;
     String gameStatus = game.status;
 
-    var odds = fetchOdds(teamName);
+    var odds = fetchOdds(teamName, _selectedDate);
     //var homeProbabilityFuture = calculateWinningProbability(game.team1, game.team2);
     //var awayProbabilityFuture = calculateWinningProbability(game.team2, game.team1);
     //var winningTeam = isHomeTeam ? homeProbabilityFuture : awayProbabilityFuture; // Send correct team probability to PlaceBetPopup
@@ -267,7 +272,7 @@ class _HomeViewState extends State<HomeView> {
             ),
           ),
           child: FutureBuilder<List<num>>(
-            future: Future.wait([fetchOdds(game.team1), fetchOdds(game.team2)]),
+            future: Future.wait([fetchOdds(game.team1, _selectedDate), fetchOdds(game.team2, _selectedDate)]),
             builder: (context, snapshot) {
               if (snapshot.hasData) {
                 final num team1 = snapshot.data![0];
@@ -334,8 +339,8 @@ class _HomeViewState extends State<HomeView> {
                         ),
                         child: Column(
                           children: [
-                            _teamRow(games[index], true),
-                            _teamRow(games[index], false),
+                            _teamRow(games[index], true, _selectedDate),
+                            _teamRow(games[index], false, _selectedDate),
                             Align(
                               alignment: Alignment.bottomLeft,
                               child: Padding(
