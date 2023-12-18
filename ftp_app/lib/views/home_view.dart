@@ -241,10 +241,10 @@ class _HomeViewState extends State<HomeView> {
     //var winningTeam = isHomeTeam ? homeProbabilityFuture : awayProbabilityFuture; // Send correct team probability to PlaceBetPopup
     DateTime date = _selectedDate;
     final now = DateTime.now();
-    final tomorrow = DateTime.now().add(Duration(days: 1));
+    //final tomorrow = DateTime.now().add(Duration(days: 1));
     String formattedDate = DateFormat('yyyy-MM-dd').format(date);
     String formattedNow = DateFormat('yyyy-MM-dd').format(now);
-    String formattedDateTmr = DateFormat('yyyy-MM-dd').format(tomorrow);
+    //String formattedDateTmr = DateFormat('yyyy-MM-dd').format(tomorrow);
 
 
     return Row(
@@ -271,7 +271,7 @@ class _HomeViewState extends State<HomeView> {
           style: ButtonStyle(
             backgroundColor: MaterialStateProperty.resolveWith<Color>(
               (Set<MaterialState> states) {
-                if ((formattedDate != formattedNow) && (formattedDate != formattedDateTmr)) {
+                if (formattedDate != formattedNow) {
                   return Colors.grey; // Disables color
                 }
                 else{
