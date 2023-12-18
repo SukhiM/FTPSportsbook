@@ -234,6 +234,7 @@ class _HomeViewState extends State<HomeView> {
   Widget _teamRow(Game game, bool isHomeTeam, DateTime _selectedDate) {
     String teamName = isHomeTeam ? game.team1 : game.team2;
     String gameStatus = game.status;
+    bool isLoading = false;
 
     var odds = fetchOdds(teamName, _selectedDate);
     //var homeProbabilityFuture = calculateWinningProbability(game.team1, game.team2);
@@ -261,20 +262,11 @@ class _HomeViewState extends State<HomeView> {
               await _showPlaceBetPopup(context, game, teamName, probability);
             }
             : null, // Disables the button if the status is null or closed
-          style: ButtonStyle(
-            backgroundColor: MaterialStateProperty.resolveWith<Color>(
-              (Set<MaterialState> states) {
-                if (states.contains(MaterialState.disabled)) {
-                  return Colors.grey; // Disables color
-                }
-                return Colors.blue; // Themed color, different than text color
-              },
-            ),
-          ),
           child: FutureBuilder<List<num>>(
             future: Future.wait([fetchOdds(game.team1, _selectedDate), fetchOdds(game.team2, _selectedDate)]),
             builder: (context, snapshot) {
               if (snapshot.hasData) {
+                isLoading = false;
                 final num team1 = snapshot.data![0];
                 final num team2 = snapshot.data![1];
                 return Text(
@@ -283,9 +275,20 @@ class _HomeViewState extends State<HomeView> {
                       : 'Odds: ${team2}',
                 );
               } else {
-                return Text('...'); // Loading indicator
+                isLoading = true;
+                return Icon(Icons.lock); // Loading indicator
               }
             },
+          ),
+          style: ButtonStyle(
+            backgroundColor: MaterialStateProperty.resolveWith<Color>(
+              (Set<MaterialState> states) {
+                if ((states.contains(MaterialState.disabled)) || (isLoading == true)) {
+                  return Colors.grey; // Disables color
+                }
+                return Colors.blue; // Themed color, different than text color
+              },
+            ),
           ),
         ),
       ],
