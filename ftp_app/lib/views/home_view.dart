@@ -231,15 +231,19 @@ class _HomeViewState extends State<HomeView> {
         height: 24, width: 24); // Adjust the size as needed
   }
 
-  Widget _teamRow(Game game, bool isHomeTeam, DateTime _selectedDate) {
+  Widget _teamRow(Game game, bool isHomeTeam, DateTime _selectedDate, List<Game> games) {
     String teamName = isHomeTeam ? game.team1 : game.team2;
     String gameStatus = game.status;
-    bool isLoading = false;
 
     var odds = fetchOdds(teamName, _selectedDate);
     //var homeProbabilityFuture = calculateWinningProbability(game.team1, game.team2);
     //var awayProbabilityFuture = calculateWinningProbability(game.team2, game.team1);
     //var winningTeam = isHomeTeam ? homeProbabilityFuture : awayProbabilityFuture; // Send correct team probability to PlaceBetPopup
+    DateTime date = _selectedDate;
+    final now = DateTime.now();
+    String formattedDate = DateFormat('yyyy-MM-dd').format(date);
+    String formattedNow = DateFormat('yyyy-MM-dd').format(now);
+
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -262,11 +266,22 @@ class _HomeViewState extends State<HomeView> {
               await _showPlaceBetPopup(context, game, teamName, probability);
             }
             : null, // Disables the button if the status is null or closed
+          style: ButtonStyle(
+            backgroundColor: MaterialStateProperty.resolveWith<Color>(
+              (Set<MaterialState> states) {
+                if ((formattedDate != formattedNow)) {
+                  return Colors.grey; // Disables color
+                }
+                else{
+                  return Colors.blue; // Themed color, different than text color
+                }
+              },
+            ),
+          ),
           child: FutureBuilder<List<num>>(
             future: Future.wait([fetchOdds(game.team1, _selectedDate), fetchOdds(game.team2, _selectedDate)]),
             builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                isLoading = false;
+              if ((snapshot.hasData) && (formattedDate == formattedNow)) {
                 final num team1 = snapshot.data![0];
                 final num team2 = snapshot.data![1];
                 return Text(
@@ -275,20 +290,9 @@ class _HomeViewState extends State<HomeView> {
                       : 'Odds: ${team2}',
                 );
               } else {
-                isLoading = true;
                 return Icon(Icons.lock); // Loading indicator
               }
             },
-          ),
-          style: ButtonStyle(
-            backgroundColor: MaterialStateProperty.resolveWith<Color>(
-              (Set<MaterialState> states) {
-                if ((states.contains(MaterialState.disabled)) || (isLoading == true)) {
-                  return Colors.grey; // Disables color
-                }
-                return Colors.blue; // Themed color, different than text color
-              },
-            ),
           ),
         ),
       ],
@@ -342,8 +346,8 @@ class _HomeViewState extends State<HomeView> {
                         ),
                         child: Column(
                           children: [
-                            _teamRow(games[index], true, _selectedDate),
-                            _teamRow(games[index], false, _selectedDate),
+                            _teamRow(games[index], true, _selectedDate, games),
+                            _teamRow(games[index], false, _selectedDate, games),
                             Align(
                               alignment: Alignment.bottomLeft,
                               child: Padding(
