@@ -20,15 +20,16 @@ class BetHistoryCard extends StatelessWidget {
   final double amount;
   final String matchup;
   final DateTime betPlacedDate;
+  final double? payout;
 
-  BetHistoryCard({
-    required this.teamBetOn,
-    required this.betID,
-    required this.status,
-    required this.amount,
-    required this.matchup,
-    required this.betPlacedDate,
-  });
+  BetHistoryCard(
+      {required this.teamBetOn,
+      required this.betID,
+      required this.status,
+      required this.amount,
+      required this.matchup,
+      required this.betPlacedDate,
+      this.payout});
 
   void _showShareDialog(BuildContext context, String betID) {
     TextEditingController _messageController = TextEditingController();
@@ -134,14 +135,16 @@ class BetHistoryCard extends StatelessWidget {
                     color: Colors.green,
                   ),
                 ),
-                // SizedBox(height: 8),
-                // Text(
-                //   'Payout: ${payout.toStringAsFixed(2)}',
-                //   style: TextStyle(
-                //     fontSize: 16,
-                //     color: payout > 0 ? Colors.green : Colors.red,
-                //   ),
-                // ),
+                if (payout != null) ...[
+                  SizedBox(height: 8),
+                  Text(
+                    'Payout: ${payout!.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: payout! > 0 ? Colors.green : Colors.red,
+                    ),
+                  ),
+                ],
                 SizedBox(height: 8.0),
                 Text(
                   '$matchup',
@@ -229,6 +232,7 @@ class _BetHistoryViewState extends State<BetHistoryView> {
                     amount: bet['amount'].toDouble(),
                     matchup: bet['matchup'],
                     betPlacedDate: bet['placedAt'].toDate(),
+                    payout: bet['payout']?.toDouble(),
                   );
                 },
               ));
