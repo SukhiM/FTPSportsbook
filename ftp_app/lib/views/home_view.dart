@@ -281,7 +281,7 @@ class _HomeViewState extends State<HomeView> {
           child: FutureBuilder<List<num>>(
             future: Future.wait([fetchOdds(game.team1, _selectedDate), fetchOdds(game.team2, _selectedDate)]),
             builder: (context, snapshot) {
-              if ((snapshot.hasData) && (formattedDate == formattedNow)) {
+              if ((snapshot.hasData)) {
                 final num team1 = snapshot.data![0];
                 final num team2 = snapshot.data![1];
                 return Text(
