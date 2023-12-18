@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:firebase_auth/firebase_auth.dart';
-enum FeedCategory {All, WinningBets, LosingBets }
+enum FeedCategory {All, Bets, Shared}
 class SocialFeed extends StatefulWidget {
   @override
   _SocialFeedState createState() => _SocialFeedState();
@@ -154,12 +154,12 @@ Widget build(BuildContext context) {
               child: Text('All'),
              ),
             DropdownMenuItem(
-              value: FeedCategory.WinningBets,
-              child: Text('Winning Bets'),
+              value: FeedCategory.Bets,
+              child: Text('Bets'),
              ),
              DropdownMenuItem(
-               value: FeedCategory.LosingBets,
-               child: Text('Losing Bets'),
+               value: FeedCategory.Shared,
+               child: Text('Shared'),
                ),
               ],
             ),
@@ -200,10 +200,10 @@ Widget build(BuildContext context) {
 
                 if (selectedCategory == FeedCategory.All) {
                 return true;
-               } else if (selectedCategory == FeedCategory.WinningBets) {
+               } else if (selectedCategory == FeedCategory.Bets) {
                  return type == 'betslip' && feedItem['payout'] > 0;
-               } else if (selectedCategory == FeedCategory.LosingBets) {
-                  return type == 'betslip' && feedItem['payout'] <= 0;
+               } else if (selectedCategory == FeedCategory.Shared) {
+                  return type == 'share' && feedItem['payout'] <= 0;
                }
                 return false;
                }).toList();
