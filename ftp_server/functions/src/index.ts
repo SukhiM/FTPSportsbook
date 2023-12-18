@@ -431,8 +431,23 @@ export const updateDay = onRequest(async (request, response) => {
 
         if (betData.team == gameData.winner) {
           await betSnapshot.ref.update({status: "won"});
+          let payoutOdds;
+          if (gameData.winner == gameData.home) {
+            payoutOdds = gameData.homeOdds;
+          } else {
+            payoutOdds = gameData.awayOdds;
+          }
+          let payoutAmount;
+          if (payoutOdds > 0) {
+            payoutAmount =
+                (betData.amount + (betData.amount * (payoutOdds / 100)));
+          } else {
+            payoutAmount =
+              (betData.amount +
+                  (betData.amount * (100 / Math.abs(payoutOdds))));
+          }
           await userRef.update({balance:
-            admin.firestore.FieldValue.increment(betData.amount * 2)});
+            admin.firestore.FieldValue.increment(payoutAmount)});
           await feedSnapshot.ref.update({status: "won"});
         } else {
           await betSnapshot.ref.update({status: "lost"});
